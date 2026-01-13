@@ -1,0 +1,27 @@
+# Gradle files
+.build/
+build/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.bin/
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Environment
+.env
+*.log
+
+# Wallet files (for security)
+*.wallet
+wallets/

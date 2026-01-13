@@ -1,0 +1,109 @@
+package com.btcwallet.service;
+
+import com.btcwallet.exception.WalletException;
+import com.btcwallet.model.Wallet;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.crypto.MnemonicException;
+
+import java.security.SecureRandom;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Service for generating new Bitcoin wallets.
+ */
+public class WalletGenerator {
+    
+    private final NetworkParameters networkParameters;
+    private final SecureRandom secureRandom;
+    
+    /**
+     * Creates a new WalletGenerator instance.
+     *
+     * @param networkParameters Network parameters (MainNet, TestNet, etc.)
+     */
+    public WalletGenerator(NetworkParameters networkParameters) {
+        this.networkParameters = networkParameters;
+        this.secureRandom = new SecureRandom();
+    }
+    
+    /**
+     * Generates a new Bitcoin wallet with a random key pair.
+     *
+     * @return Newly generated Wallet
+     */
+    public Wallet generateWallet() {
+        ECKey ecKey = new ECKey(secureRandom);
+        String walletId = generateWalletId();
+        return Wallet.fromECKey(walletId, ecKey, networkParameters);
+    }
+    
+    /**
+     * Generates a new Bitcoin wallet with a mnemonic seed phrase.
+     *
+     * @return WalletGenerationResult containing the wallet and mnemonic
+     */
+    public WalletGenerationResult generateWalletWithMnemonic() {
+        byte[] entropy = new byte[16]; // 128 bits for 12-word mnemonic
+        secureRandom.nextBytes(entropy);
+        
+        try {
+            MnemonicCode mnemonicCode = MnemonicCode.INSTANCE;
+            List<String> mnemonicWords = mnemonicCode.toMnemonic(entropy);
+            byte[] seed = MnemonicCode.toSeed(mnemonicWords, ""); // Empty passphrase
+            
+            // Use proper BIP32/BIP44 derivation for mnemonic seeds
+            // For simplicity, we'll use the first 32 bytes of the seed as the private key
+            // In a production app, you would use proper hierarchical deterministic derivation
+            byte[] privateKeyBytes;
+            if (seed.length > 32) {
+                privateKeyBytes = new byte[32];
+                System.arraycopy(seed, 0, privateKeyBytes, 0, 32);
+            } else {
+                privateKeyBytes = seed;
+            }
+            
+            ECKey ecKey = ECKey.fromPrivate(privateKeyBytes);
+            String walletId = generateWalletId();
+            Wallet wallet = Wallet.fromECKey(walletId, ecKey, networkParameters);
+            
+            return new WalletGenerationResult(wallet, String.join(" ", mnemonicWords));
+        } catch (Exception e) {
+            throw WalletException.generationFailed("Failed to generate mnemonic seed phrase: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Generates a unique wallet ID.
+     *
+     * @return Unique wallet identifier
+     */
+    private String generateWalletId() {
+        return "WALLET-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    /**
+     * Result object for wallet generation with mnemonic.
+     */
+    public static class WalletGenerationResult {
+        private final Wallet wallet;
+        private final String mnemonic;
+        
+        public WalletGenerationResult(Wallet wallet, String mnemonic) {
+            this.wallet = wallet;
+            this.mnemonic = mnemonic;
+        }
+        
+        public Wallet getWallet() {
+            return wallet;
+        }
+        
+        public String getMnemonic() {
+            return mnemonic;
+        }
+    }
+    
+
+}
