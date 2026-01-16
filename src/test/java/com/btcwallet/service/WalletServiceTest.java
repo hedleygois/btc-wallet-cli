@@ -46,12 +46,12 @@ class WalletServiceTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("WALLET-"));
-        assertNotNull(wallet.getAddress());
-        assertNotNull(wallet.getPublicKey());
-        assertNotNull(wallet.getPrivateKey());
-        assertEquals(MainNetParams.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("WALLET-"));
+        assertNotNull(wallet.address());
+        assertNotNull(wallet.publicKey());
+        assertNotNull(wallet.privateKey());
+        assertEquals(MainNetParams.get(), wallet.networkParameters());
     }
 
     @Test
@@ -68,10 +68,10 @@ class WalletServiceTest {
         assertNotNull(result.getMnemonic());
         
         Wallet wallet = result.getWallet();
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("WALLET-"));
-        assertNotNull(wallet.getAddress());
-        assertEquals(TestNet3Params.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("WALLET-"));
+        assertNotNull(wallet.address());
+        assertEquals(TestNet3Params.get(), wallet.networkParameters());
         
         // Verify mnemonic format
         String[] words = result.getMnemonic().split("\\s+");
@@ -90,11 +90,11 @@ class WalletServiceTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("IMPORTED-"));
-        assertEquals(ecKey.getPublicKeyAsHex(), wallet.getPublicKey());
-        assertEquals(privateKeyHex, wallet.getPrivateKey());
-        assertEquals(MainNetParams.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("IMPORTED-"));
+        assertEquals(ecKey.getPublicKeyAsHex(), wallet.publicKey());
+        assertEquals(privateKeyHex, wallet.privateKey());
+        assertEquals(MainNetParams.get(), wallet.networkParameters());
     }
 
     @Test
@@ -108,10 +108,10 @@ class WalletServiceTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("IMPORTED-"));
-        assertNotNull(wallet.getAddress());
-        assertEquals(MainNetParams.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("IMPORTED-"));
+        assertNotNull(wallet.address());
+        assertEquals(MainNetParams.get(), wallet.networkParameters());
     }
 
     @Test
@@ -206,12 +206,12 @@ class WalletServiceTest {
         Wallet testNetWallet = testNetService.importFromPrivateKey(privateKeyHex);
 
         // Then
-        assertNotEquals(mainNetWallet.getAddress(), testNetWallet.getAddress());
-        assertNotEquals(mainNetWallet.getNetworkParameters(), testNetWallet.getNetworkParameters());
+        assertNotEquals(mainNetWallet.address(), testNetWallet.address());
+        assertNotEquals(mainNetWallet.networkParameters(), testNetWallet.networkParameters());
         
         // But keys should be the same
-        assertEquals(mainNetWallet.getPublicKey(), testNetWallet.getPublicKey());
-        assertEquals(mainNetWallet.getPrivateKey(), testNetWallet.getPrivateKey());
+        assertEquals(mainNetWallet.publicKey(), testNetWallet.publicKey());
+        assertEquals(mainNetWallet.privateKey(), testNetWallet.privateKey());
     }
 
     @Test
@@ -227,7 +227,7 @@ class WalletServiceTest {
         Wallet importedWallet = service.importFromMnemonic(mnemonic);
         
         // They should have the same address
-        assertEquals(generationResult.getWallet().getAddress(), importedWallet.getAddress());
-        assertEquals(generationResult.getWallet().getPublicKey(), importedWallet.getPublicKey());
+        assertEquals(generationResult.getWallet().address(), importedWallet.address());
+        assertEquals(generationResult.getWallet().publicKey(), importedWallet.publicKey());
     }
 }

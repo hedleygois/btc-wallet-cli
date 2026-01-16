@@ -21,12 +21,12 @@ public class SimpleTest {
             // Test wallet generation
             Wallet wallet = walletService.generateWallet();
             System.out.println("✅ Wallet generated successfully");
-            System.out.println("   Address: " + wallet.getAddress());
-            System.out.println("   Public Key: " + wallet.getPublicKey());
+            System.out.println("   Address: " + wallet.address());
+            System.out.println("   Public Key: " + wallet.publicKey());
             System.out.println("   Network: " + walletService.getNetworkName());
             
             // Test address validation
-            boolean isValid = walletService.isValidAddress(wallet.getAddress());
+            boolean isValid = walletService.isValidAddress(wallet.address());
             System.out.println("✅ Address validation: " + (isValid ? "PASS" : "FAIL"));
             
             // Test wallet generation with mnemonic
@@ -35,12 +35,12 @@ public class SimpleTest {
             System.out.println("   Mnemonic words: " + mnemonicResult.getMnemonic().split("\\s+").length);
             
             // Test wallet import from private key
-            Wallet importedWallet = walletService.importFromPrivateKey(wallet.getPrivateKey());
+            Wallet importedWallet = walletService.importFromPrivateKey(wallet.privateKey());
             System.out.println("✅ Wallet imported from private key successfully");
-            System.out.println("   Imported Address: " + importedWallet.getAddress());
+            System.out.println("   Imported Address: " + importedWallet.address());
             
             // Verify addresses match
-            boolean addressesMatch = wallet.getAddress().equals(importedWallet.getAddress());
+            boolean addressesMatch = wallet.address().equals(importedWallet.address());
             System.out.println("✅ Address match verification: " + (addressesMatch ? "PASS" : "FAIL"));
             
             System.out.println("\n🎉 All tests passed! Core functionality is working correctly.");

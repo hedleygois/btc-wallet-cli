@@ -156,11 +156,11 @@ public class WalletCLI {
         Wallet wallet = walletService.generateWallet();
         
         System.out.println("✅ Wallet generated successfully!");
-        System.out.println("🆔 Wallet ID: " + wallet.getWalletId());
-        System.out.println("🏦 Address: " + wallet.getAddress());
-        System.out.println("🔑 Public Key: " + wallet.getPublicKey());
-        System.out.println("🔒 Private Key: " + wallet.getPrivateKey());
-        System.out.println("📅 Created: " + wallet.getCreatedAt());
+        System.out.println("🆔 Wallet ID: " + wallet.walletId());
+        System.out.println("🏦 Address: " + wallet.address());
+        System.out.println("🔑 Public Key: " + wallet.publicKey());
+        System.out.println("🔒 Private Key: " + wallet.privateKey());
+        System.out.println("📅 Created: " + wallet.createdAt());
         System.out.println("🌐 Network: " + walletService.getNetworkName());
         System.out.println();
         
@@ -181,11 +181,11 @@ public class WalletCLI {
         Wallet wallet = result.getWallet();
         
         System.out.println("✅ Wallet generated successfully!");
-        System.out.println("🆔 Wallet ID: " + wallet.getWalletId());
-        System.out.println("🏦 Address: " + wallet.getAddress());
-        System.out.println("🔑 Public Key: " + wallet.getPublicKey());
-        System.out.println("🔒 Private Key: " + wallet.getPrivateKey());
-        System.out.println("📅 Created: " + wallet.getCreatedAt());
+        System.out.println("🆔 Wallet ID: " + wallet.walletId());
+        System.out.println("🏦 Address: " + wallet.address());
+        System.out.println("🔑 Public Key: " + wallet.publicKey());
+        System.out.println("🔒 Private Key: " + wallet.privateKey());
+        System.out.println("📅 Created: " + wallet.createdAt());
         System.out.println("🌐 Network: " + walletService.getNetworkName());
         System.out.println();
         
@@ -250,10 +250,10 @@ public class WalletCLI {
             }
             
             System.out.println("✅ Wallet imported successfully!");
-            System.out.println("🆔 Wallet ID: " + wallet.getWalletId());
-            System.out.println("🏦 Address: " + wallet.getAddress());
-            System.out.println("🔑 Public Key: " + wallet.getPublicKey());
-            System.out.println("🔒 Private Key: " + wallet.getPrivateKey());
+            System.out.println("🆔 Wallet ID: " + wallet.walletId());
+            System.out.println("🏦 Address: " + wallet.address());
+            System.out.println("🔑 Public Key: " + wallet.publicKey());
+            System.out.println("🔒 Private Key: " + wallet.privateKey());
             System.out.println("🌐 Network: " + walletService.getNetworkName());
             System.out.println();
             

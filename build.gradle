@@ -8,24 +8,24 @@ repositories {
 }
 
 dependencies {
-    // BitcoinJ library
-    implementation 'org.bitcoinj:bitcoinj-core:0.16.2'
+    // BitcoinJ library (latest version)
+    implementation 'org.bitcoinj:bitcoinj-core:0.16.3'
     
-    // Testing
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
-    testImplementation 'org.junit.platform:junit-platform-launcher:1.9.2'
-    testImplementation 'org.mockito:mockito-core:5.3.1'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
+    // Testing (updated to latest versions)
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+    testImplementation 'org.junit.platform:junit-platform-launcher:1.10.0'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
     
-    // JSON for storage
+    // JSON for storage (updated to latest version)
     implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 

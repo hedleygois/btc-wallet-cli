@@ -20,12 +20,12 @@ class WalletGeneratorTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("WALLET-"));
-        assertNotNull(wallet.getAddress());
-        assertNotNull(wallet.getPublicKey());
-        assertNotNull(wallet.getPrivateKey());
-        assertEquals(MainNetParams.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("WALLET-"));
+        assertNotNull(wallet.address());
+        assertNotNull(wallet.publicKey());
+        assertNotNull(wallet.privateKey());
+        assertEquals(MainNetParams.get(), wallet.networkParameters());
     }
 
     @Test
@@ -42,12 +42,12 @@ class WalletGeneratorTest {
         assertNotNull(result.getMnemonic());
         
         Wallet wallet = result.getWallet();
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("WALLET-"));
-        assertNotNull(wallet.getAddress());
-        assertNotNull(wallet.getPublicKey());
-        assertNotNull(wallet.getPrivateKey());
-        assertEquals(TestNet3Params.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("WALLET-"));
+        assertNotNull(wallet.address());
+        assertNotNull(wallet.publicKey());
+        assertNotNull(wallet.privateKey());
+        assertEquals(TestNet3Params.get(), wallet.networkParameters());
         
         // Check mnemonic format (should be 12 words separated by spaces)
         String[] mnemonicWords = result.getMnemonic().split("\\s+");
@@ -69,14 +69,14 @@ class WalletGeneratorTest {
         Wallet testNetWallet = testNetGenerator.generateWallet();
 
         // Then
-        assertNotEquals(mainNetWallet.getAddress(), testNetWallet.getAddress());
-        assertNotEquals(mainNetWallet.getNetworkParameters(), testNetWallet.getNetworkParameters());
+        assertNotEquals(mainNetWallet.address(), testNetWallet.address());
+        assertNotEquals(mainNetWallet.networkParameters(), testNetWallet.networkParameters());
         
         // MainNet addresses should start with 1 or 3
-        assertTrue(mainNetWallet.getAddress().startsWith("1") || mainNetWallet.getAddress().startsWith("3"));
+        assertTrue(mainNetWallet.address().startsWith("1") || mainNetWallet.address().startsWith("3"));
         
         // TestNet addresses should start with m, n, or 2
-        String testNetAddress = testNetWallet.getAddress();
+        String testNetAddress = testNetWallet.address();
         assertTrue(testNetAddress.startsWith("m") || testNetAddress.startsWith("n") || testNetAddress.startsWith("2"));
     }
 
@@ -90,10 +90,10 @@ class WalletGeneratorTest {
         Wallet wallet2 = generator.generateWallet();
 
         // Then
-        assertNotEquals(wallet1.getWalletId(), wallet2.getWalletId());
-        assertNotEquals(wallet1.getAddress(), wallet2.getAddress());
-        assertNotEquals(wallet1.getPublicKey(), wallet2.getPublicKey());
-        assertNotEquals(wallet1.getPrivateKey(), wallet2.getPrivateKey());
+        assertNotEquals(wallet1.walletId(), wallet2.walletId());
+        assertNotEquals(wallet1.address(), wallet2.address());
+        assertNotEquals(wallet1.publicKey(), wallet2.publicKey());
+        assertNotEquals(wallet1.privateKey(), wallet2.privateKey());
     }
 
     @Test
@@ -110,8 +110,8 @@ class WalletGeneratorTest {
         Wallet importedWallet = importer.importFromMnemonic(result.getMnemonic());
 
         // Then - the imported wallet should have the same address as the generated one
-        assertEquals(wallet.getAddress(), importedWallet.getAddress());
-        assertEquals(wallet.getPublicKey(), importedWallet.getPublicKey());
+        assertEquals(wallet.address(), importedWallet.address());
+        assertEquals(wallet.publicKey(), importedWallet.publicKey());
         // Note: Private keys might differ due to different key derivation paths, but addresses should match
     }
 

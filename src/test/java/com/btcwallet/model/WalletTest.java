@@ -26,15 +26,15 @@ class WalletTest {
 
         // Then
         assertNotNull(wallet);
-        assertEquals(walletId, wallet.getWalletId());
-        assertNotNull(wallet.getAddress());
-        assertTrue(wallet.getAddress().startsWith("1") || wallet.getAddress().startsWith("3")); // MainNet addresses
-        assertNotNull(wallet.getPublicKey());
-        assertNotNull(wallet.getPrivateKey());
-        assertNotNull(wallet.getCreatedAt());
-        assertTrue(wallet.getCreatedAt().isBefore(Instant.now().plusSeconds(1)));
-        assertTrue(wallet.getCreatedAt().isAfter(Instant.now().minusSeconds(1)));
-        assertEquals(mainNet, wallet.getNetworkParameters());
+        assertEquals(walletId, wallet.walletId());
+        assertNotNull(wallet.address());
+        assertTrue(wallet.address().startsWith("1") || wallet.address().startsWith("3")); // MainNet addresses
+        assertNotNull(wallet.publicKey());
+        assertNotNull(wallet.privateKey());
+        assertNotNull(wallet.createdAt());
+        assertTrue(wallet.createdAt().isBefore(Instant.now().plusSeconds(1)));
+        assertTrue(wallet.createdAt().isAfter(Instant.now().minusSeconds(1)));
+        assertEquals(mainNet, wallet.networkParameters());
     }
 
     @Test
@@ -82,7 +82,7 @@ class WalletTest {
         // Then
         assertNotNull(walletString);
         assertTrue(walletString.contains(walletId));
-        assertTrue(walletString.contains(wallet.getAddress()));
+        assertTrue(walletString.contains(wallet.address()));
         assertTrue(walletString.contains("MainNet"));
         assertTrue(walletString.contains("publicKey="));
     }
@@ -98,14 +98,14 @@ class WalletTest {
         Wallet testNetWallet = Wallet.fromECKey(walletId, ecKey, testNet);
 
         // Then
-        assertEquals(mainNet, mainNetWallet.getNetworkParameters());
-        assertEquals(testNet, testNetWallet.getNetworkParameters());
+        assertEquals(mainNet, mainNetWallet.networkParameters());
+        assertEquals(testNet, testNetWallet.networkParameters());
         
         // MainNet addresses should start with 1 or 3
-        assertTrue(mainNetWallet.getAddress().startsWith("1") || mainNetWallet.getAddress().startsWith("3"));
+        assertTrue(mainNetWallet.address().startsWith("1") || mainNetWallet.address().startsWith("3"));
         
         // TestNet addresses should start with m or n or 2
-        String testNetAddress = testNetWallet.getAddress();
+        String testNetAddress = testNetWallet.address();
         assertTrue(testNetAddress.startsWith("m") || testNetAddress.startsWith("n") || testNetAddress.startsWith("2"));
     }
 
@@ -115,7 +115,7 @@ class WalletTest {
         ECKey ecKey = new ECKey();
         String walletId = "TEST-12345678";
         Wallet wallet = Wallet.fromECKey(walletId, ecKey, mainNet);
-        Instant createdAt = wallet.getCreatedAt();
+        Instant createdAt = wallet.createdAt();
 
         // When we try to wait a bit
         try {
@@ -125,8 +125,8 @@ class WalletTest {
         }
 
         // Then - createdAt should not change
-        assertEquals(createdAt, wallet.getCreatedAt());
-        assertEquals(walletId, wallet.getWalletId());
-        assertEquals(mainNet, wallet.getNetworkParameters());
+        assertEquals(createdAt, wallet.createdAt());
+        assertEquals(walletId, wallet.walletId());
+        assertEquals(mainNet, wallet.networkParameters());
     }
 }

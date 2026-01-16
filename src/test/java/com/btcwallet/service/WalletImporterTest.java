@@ -23,14 +23,14 @@ class WalletImporterTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("IMPORTED-"));
-        assertEquals(ecKey.getPublicKeyAsHex(), wallet.getPublicKey());
-        assertEquals(privateKeyHex, wallet.getPrivateKey());
-        assertEquals(MainNetParams.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("IMPORTED-"));
+        assertEquals(ecKey.getPublicKeyAsHex(), wallet.publicKey());
+        assertEquals(privateKeyHex, wallet.privateKey());
+        assertEquals(MainNetParams.get(), wallet.networkParameters());
         
         // Verify the address matches
-        assertEquals(org.bitcoinj.core.LegacyAddress.fromKey(MainNetParams.get(), ecKey).toString(), wallet.getAddress());
+        assertEquals(org.bitcoinj.core.LegacyAddress.fromKey(MainNetParams.get(), ecKey).toString(), wallet.address());
     }
 
     @Test
@@ -45,12 +45,12 @@ class WalletImporterTest {
 
         // Then
         assertNotNull(wallet);
-        assertNotNull(wallet.getWalletId());
-        assertTrue(wallet.getWalletId().startsWith("IMPORTED-"));
-        assertNotNull(wallet.getAddress());
-        assertNotNull(wallet.getPublicKey());
-        assertNotNull(wallet.getPrivateKey());
-        assertEquals(TestNet3Params.get(), wallet.getNetworkParameters());
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("IMPORTED-"));
+        assertNotNull(wallet.address());
+        assertNotNull(wallet.publicKey());
+        assertNotNull(wallet.privateKey());
+        assertEquals(TestNet3Params.get(), wallet.networkParameters());
     }
 
     @Test
@@ -130,12 +130,12 @@ class WalletImporterTest {
         Wallet testNetWallet = testNetImporter.importFromPrivateKey(privateKeyHex);
 
         // Then
-        assertNotEquals(mainNetWallet.getAddress(), testNetWallet.getAddress());
-        assertNotEquals(mainNetWallet.getNetworkParameters(), testNetWallet.getNetworkParameters());
+        assertNotEquals(mainNetWallet.address(), testNetWallet.address());
+        assertNotEquals(mainNetWallet.networkParameters(), testNetWallet.networkParameters());
         
         // But the public and private keys should be the same
-        assertEquals(mainNetWallet.getPublicKey(), testNetWallet.getPublicKey());
-        assertEquals(mainNetWallet.getPrivateKey(), testNetWallet.getPrivateKey());
+        assertEquals(mainNetWallet.publicKey(), testNetWallet.publicKey());
+        assertEquals(mainNetWallet.privateKey(), testNetWallet.privateKey());
     }
 
     @Test

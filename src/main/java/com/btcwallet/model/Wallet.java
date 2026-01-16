@@ -1,6 +1,5 @@
 package com.btcwallet.model;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
@@ -10,32 +9,40 @@ import java.time.Instant;
 
 /**
  * Represents a Bitcoin wallet containing a key pair and address.
- * This class is immutable once created.
+ * This is an immutable record class (Java 16+ feature).
+ *
+ * @param walletId Unique identifier for the wallet
+ * @param address Bitcoin address
+ * @param publicKey Public key in hex format
+ * @param privateKey Private key in hex format (sensitive!)
+ * @param createdAt Timestamp when wallet was created
+ * @param networkParameters Network parameters (MainNet, TestNet, etc.)
  */
-public class Wallet implements Serializable {
-    private final String walletId;
-    private final String address;
-    private final String publicKey;
-    private final String privateKey;
-    private final Instant createdAt;
-    private final NetworkParameters networkParameters;
+public record Wallet(String walletId, String address, String publicKey, String privateKey, 
+                     Instant createdAt, NetworkParameters networkParameters) implements Serializable {
     
     /**
-     * Creates a new Wallet instance.
-     *
-     * @param walletId Unique identifier for the wallet
-     * @param address Bitcoin address
-     * @param publicKey Public key in hex format
-     * @param privateKey Private key in hex format (sensitive!)
-     * @param networkParameters Network parameters (MainNet, TestNet, etc.)
+     * Compact constructor for validation and default values.
      */
-    public Wallet(String walletId, String address, String publicKey, String privateKey, NetworkParameters networkParameters) {
-        this.walletId = walletId;
-        this.address = address;
-        this.publicKey = publicKey;
-        this.privateKey = privateKey;
-        this.createdAt = Instant.now();
-        this.networkParameters = networkParameters;
+    public Wallet {
+        if (walletId == null || walletId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Wallet ID cannot be null or empty");
+        }
+        if (address == null || address.trim().isEmpty()) {
+            throw new IllegalArgumentException("Address cannot be null or empty");
+        }
+        if (publicKey == null || publicKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("Public key cannot be null or empty");
+        }
+        if (privateKey == null || privateKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("Private key cannot be null or empty");
+        }
+        if (networkParameters == null) {
+            throw new IllegalArgumentException("Network parameters cannot be null");
+        }
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
     }
     
     /**
@@ -47,39 +54,15 @@ public class Wallet implements Serializable {
      * @return New Wallet instance
      */
     public static Wallet fromECKey(String walletId, ECKey ecKey, NetworkParameters networkParameters) {
-        org.bitcoinj.core.Address address = org.bitcoinj.core.LegacyAddress.fromKey(networkParameters, ecKey);
+        var address = org.bitcoinj.core.LegacyAddress.fromKey(networkParameters, ecKey);
         return new Wallet(
             walletId,
             address.toString(),
             ecKey.getPublicKeyAsHex(),
             ecKey.getPrivateKeyAsHex(),
+            Instant.now(),
             networkParameters
         );
-    }
-    
-    // Getters
-    public String getWalletId() {
-        return walletId;
-    }
-    
-    public String getAddress() {
-        return address;
-    }
-    
-    public String getPublicKey() {
-        return publicKey;
-    }
-    
-    public String getPrivateKey() {
-        return privateKey;
-    }
-    
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-    
-    public NetworkParameters getNetworkParameters() {
-        return networkParameters;
     }
     
     /**
@@ -93,13 +76,13 @@ public class Wallet implements Serializable {
     
     @Override
     public String toString() {
-        return "Wallet{" +
+        return "Wallet[" +
                 "walletId='" + walletId + '\'' +
                 ", address='" + address + '\'' +
                 ", publicKey='" + publicKey + '\'' +
                 ", createdAt=" + createdAt +
                 ", network=" + (networkParameters.getId().equals(MainNetParams.get().getId()) ? "MainNet" : "TestNet") +
-                '}';
+                ']';
     }
     
     @Override
