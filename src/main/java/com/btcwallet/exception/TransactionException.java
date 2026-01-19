@@ -87,12 +87,26 @@ public sealed class TransactionException extends RuntimeException
     public static TransactionException invalidTransaction(String message) {
         return new InvalidTransactionException(message);
     }
+
+    /**
+     * Factory method for invalid transaction exceptions with cause.
+     */
+    public static TransactionException invalidTransaction(String message, Exception cause) {
+        return new InvalidTransactionException(message, cause);
+    }
     
     /**
      * Factory method for signing exceptions.
      */
     public static TransactionException signingFailed(String message) {
         return new SigningException(message);
+    }
+
+    /**
+     * Factory method for signing exceptions with cause.
+     */
+    public static TransactionException signingFailed(String message, Exception cause) {
+        return new SigningException(message, cause);
     }
     
     /**
@@ -101,12 +115,33 @@ public sealed class TransactionException extends RuntimeException
     public static TransactionException networkError(String message) {
         return new NetworkException(message);
     }
+
+    /**
+     * Factory method for network exceptions with cause.
+     */
+    public static TransactionException networkError(String message, Exception cause) {
+        return new NetworkException(message, cause);
+    }
     
     /**
      * Factory method for fee calculation exceptions.
      */
     public static TransactionException feeCalculationFailed(String message) {
         return new FeeCalculationException(message);
+    }
+    
+    /**
+     * Factory method for general transaction failures.
+     */
+    public static TransactionException transactionFailed(String message) {
+        return new InvalidTransactionException(message);
+    }
+    
+    /**
+     * Factory method for general transaction failures with cause.
+     */
+    public static TransactionException transactionFailed(String message, Exception cause) {
+        return new InvalidTransactionException(message, cause);
     }
     
     /**

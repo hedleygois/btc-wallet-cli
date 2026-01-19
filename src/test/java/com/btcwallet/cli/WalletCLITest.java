@@ -1,6 +1,6 @@
 package com.btcwallet.cli;
 
-import com.btcwallet.service.WalletService;
+import com.btcwallet.service.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -18,7 +18,10 @@ class WalletCLITest {
 
         // When/Then - should not throw exception
         assertDoesNotThrow(() -> {
-            WalletCLI cli = new WalletCLI(walletService);
+            NetworkMonitor networkMonitor = new NetworkMonitor();
+            FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
+            TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
+            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
             assertNotNull(cli);
         });
     }
@@ -27,6 +30,9 @@ class WalletCLITest {
     void testCLIConstructorWithMockInput() {
         // Given
         WalletService walletService = new WalletService();
+        NetworkMonitor networkMonitor = new NetworkMonitor();
+        FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
+        TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
         
         // Mock System.in with empty input
         InputStream originalIn = System.in;
@@ -35,7 +41,7 @@ class WalletCLITest {
             
             // When/Then - should handle empty input gracefully
             assertDoesNotThrow(() -> {
-                WalletCLI cli = new WalletCLI(walletService);
+                WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
                 assertNotNull(cli);
             });
             

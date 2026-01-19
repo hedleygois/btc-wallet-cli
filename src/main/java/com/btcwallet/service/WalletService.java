@@ -4,6 +4,9 @@ import com.btcwallet.model.Wallet;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Main service for wallet operations, combining generation and import functionality.
  */
@@ -12,6 +15,7 @@ public class WalletService {
     private final WalletGenerator walletGenerator;
     private final WalletImporter walletImporter;
     private final NetworkParameters networkParameters;
+    private final Map<String, Wallet> walletStorage = new HashMap<>();
     
     /**
      * Creates a new WalletService instance.
@@ -38,7 +42,9 @@ public class WalletService {
      * @return Newly generated wallet
      */
     public Wallet generateWallet() {
-        return walletGenerator.generateWallet();
+        Wallet wallet = walletGenerator.generateWallet();
+        walletStorage.put(wallet.walletId(), wallet);
+        return wallet;
     }
     
     /**
@@ -47,7 +53,9 @@ public class WalletService {
      * @return WalletGenerationResult containing wallet and mnemonic
      */
     public WalletGenerator.WalletGenerationResult generateWalletWithMnemonic() {
-        return walletGenerator.generateWalletWithMnemonic();
+        WalletGenerator.WalletGenerationResult result = walletGenerator.generateWalletWithMnemonic();
+        walletStorage.put(result.getWallet().walletId(), result.getWallet());
+        return result;
     }
     
     /**
@@ -58,7 +66,9 @@ public class WalletService {
      * @throws WalletImporter.WalletImportException If import fails
      */
     public Wallet importFromPrivateKey(String privateKeyHex) {
-        return walletImporter.importFromPrivateKey(privateKeyHex);
+        Wallet wallet = walletImporter.importFromPrivateKey(privateKeyHex);
+        walletStorage.put(wallet.walletId(), wallet);
+        return wallet;
     }
     
     /**
@@ -69,7 +79,9 @@ public class WalletService {
      * @throws WalletImporter.WalletImportException If import fails
      */
     public Wallet importFromMnemonic(String mnemonic) {
-        return walletImporter.importFromMnemonic(mnemonic);
+        Wallet wallet = walletImporter.importFromMnemonic(mnemonic);
+        walletStorage.put(wallet.walletId(), wallet);
+        return wallet;
     }
     
     /**
@@ -80,7 +92,9 @@ public class WalletService {
      * @throws WalletImporter.WalletImportException If import fails
      */
     public Wallet importFromWIF(String wifPrivateKey) {
-        return walletImporter.importFromWIF(wifPrivateKey);
+        Wallet wallet = walletImporter.importFromWIF(wifPrivateKey);
+        walletStorage.put(wallet.walletId(), wallet);
+        return wallet;
     }
     
     /**
@@ -118,5 +132,32 @@ public class WalletService {
         } else {
             return "TestNet";
         }
+    }
+
+    /**
+     * Gets a wallet by its ID.
+     *
+     * @param walletId Wallet ID to retrieve
+     * @return Wallet if found, null otherwise
+     */
+    public Wallet getWallet(String walletId) {
+        return walletStorage.get(walletId);
+    }
+
+    /**
+     * Gets all stored wallets.
+     *
+     * @return Map of wallet IDs to wallets
+     */
+    public Map<String, Wallet> getAllWallets() {
+        return new HashMap<>(walletStorage);
+    }
+
+    /**
+     * Clears all stored wallets.
+     * Useful for testing.
+     */
+    public void clearWallets() {
+        walletStorage.clear();
     }
 }

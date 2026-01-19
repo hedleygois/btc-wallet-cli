@@ -2,7 +2,7 @@ package com.btcwallet;
 
 import com.btcwallet.cli.WalletCLI;
 import com.btcwallet.exception.WalletException;
-import com.btcwallet.service.WalletService;
+import com.btcwallet.service.*;
 
 /**
  * Main entry point for the BTC Wallet Management Application.
@@ -17,9 +17,12 @@ public class Main {
         try {
             // Initialize wallet service (default to MainNet)
             WalletService walletService = new WalletService();
+            NetworkMonitor networkMonitor = new NetworkMonitor();
+            FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
+            TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
             
             // Start the CLI interface
-            WalletCLI cli = new WalletCLI(walletService);
+            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
             cli.start();
             
         } catch (WalletException e) {

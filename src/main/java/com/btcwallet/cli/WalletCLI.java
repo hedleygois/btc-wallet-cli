@@ -1,9 +1,10 @@
 package com.btcwallet.cli;
 
+import com.btcwallet.exception.TransactionException;
 import com.btcwallet.exception.WalletException;
+import com.btcwallet.model.Transaction;
 import com.btcwallet.model.Wallet;
-import com.btcwallet.service.WalletGenerator;
-import com.btcwallet.service.WalletService;
+import com.btcwallet.service.*;
 
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -15,6 +16,9 @@ import java.util.Scanner;
 public class WalletCLI {
     
     private final WalletService walletService;
+    private final TransactionService transactionService;
+    private final FeeCalculator feeCalculator;
+    private final NetworkMonitor networkMonitor;
     private Scanner scanner;
     private boolean running;
     
@@ -22,9 +26,16 @@ public class WalletCLI {
      * Creates a new WalletCLI instance.
      *
      * @param walletService Wallet service to use for operations
+     * @param transactionService Transaction service for transaction operations
+     * @param feeCalculator Fee calculator for estimating transaction fees
+     * @param networkMonitor Network monitor for checking network conditions
      */
-    public WalletCLI(WalletService walletService) {
+    public WalletCLI(WalletService walletService, TransactionService transactionService, 
+                    FeeCalculator feeCalculator, NetworkMonitor networkMonitor) {
         this.walletService = walletService;
+        this.transactionService = transactionService;
+        this.feeCalculator = feeCalculator;
+        this.networkMonitor = networkMonitor;
         try {
             this.scanner = new Scanner(System.in);
         } catch (Exception e) {
@@ -114,6 +125,15 @@ public class WalletCLI {
                 showNetworkInfo();
                 break;
                 
+            case "transaction":
+            case "tx":
+                handleCreateTransaction();
+                break;
+                
+            case "fee-estimate":
+                showFeeEstimate();
+                break;
+                
             case "exit":
             case "quit":
             case "q":
@@ -136,6 +156,8 @@ public class WalletCLI {
         System.out.println("  import <key|mnemonic|wif> - Import wallet from private key, mnemonic, or WIF");
         System.out.println("  validate <address>       - Validate a Bitcoin address");
         System.out.println("  info, network            - Show network information");
+        System.out.println("  transaction, tx          - Create a new transaction");
+        System.out.println("  fee-estimate             - Estimate transaction fees");
         System.out.println("  exit, quit, q            - Exit the application");
         System.out.println();
         
@@ -144,6 +166,8 @@ public class WalletCLI {
         System.out.println("  import 5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF");
         System.out.println("  import 'abandon abandon...'");
         System.out.println("  validate 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
+        System.out.println("  transaction               - Create a transaction");
+        System.out.println("  fee-estimate              - Get fee estimates");
         System.out.println();
     }
     
@@ -291,6 +315,7 @@ public class WalletCLI {
         System.out.println("\n🌐 Network Information:");
         System.out.println("   Network: " + walletService.getNetworkName());
         System.out.println("   BitcoinJ Version: " + org.bitcoinj.core.VersionMessage.BITCOINJ_VERSION);
+        System.out.println("   Status: " + networkMonitor.getNetworkStatus());
         System.out.println();
     }
     
@@ -318,5 +343,149 @@ public class WalletCLI {
         // Mnemonics are typically 12, 18, or 24 words separated by spaces
         String[] words = input.split("\\s+");
         return words.length == 12 || words.length == 18 || words.length == 24;
+    }
+    
+    /**
+     * Handles transaction creation.
+     */
+    private void handleCreateTransaction() {
+        try {
+            System.out.println("\n💰 Create New Transaction");
+            System.out.println("Network Status: " + networkMonitor.getNetworkStatus());
+            System.out.println();
+            
+            // Get wallet ID
+            System.out.print("🆔 Enter wallet ID: ");
+            String walletId = scanner.nextLine().trim();
+            
+            if (walletId.isEmpty()) {
+                System.out.println("❌ Wallet ID cannot be empty.");
+                return;
+            }
+            
+            // Check if wallet exists
+            Wallet wallet = walletService.getWallet(walletId);
+            if (wallet == null) {
+                System.out.println("❌ Wallet not found: " + walletId);
+                return;
+            }
+            
+            System.out.println("✅ Wallet found: " + wallet.address());
+            System.out.println();
+            
+            // Get recipient address
+            System.out.print("🏦 Enter recipient Bitcoin address: ");
+            String recipientAddress = scanner.nextLine().trim();
+            
+            if (!walletService.isValidAddress(recipientAddress)) {
+                System.out.println("❌ Invalid Bitcoin address: " + recipientAddress);
+                return;
+            }
+            
+            // Get amount
+            System.out.print("💵 Enter amount in BTC (e.g., 0.001): ");
+            String amountInput = scanner.nextLine().trim();
+            
+            double btcAmount;
+            try {
+                btcAmount = Double.parseDouble(amountInput);
+                if (btcAmount <= 0) {
+                    System.out.println("❌ Amount must be positive.");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("❌ Invalid amount format: " + amountInput);
+                return;
+            }
+            
+            long amountSatoshis = FeeCalculator.btcToSatoshis(btcAmount);
+            
+            // Get transaction type (simulation or real)
+            System.out.print("🔄 Transaction type (simulation/real) [simulation]: ");
+            String transactionType = scanner.nextLine().trim();
+            
+            boolean isSimulation = !transactionType.equalsIgnoreCase("real");
+            
+            if (isSimulation) {
+                System.out.println("ℹ️  Creating SIMULATION transaction (will not be broadcasted)");
+            } else {
+                System.out.println("⚠️  Creating REAL transaction (will be broadcasted to network)");
+                System.out.print("🔒 Confirm real transaction? (yes/no) [no]: ");
+                String confirmation = scanner.nextLine().trim();
+                
+                if (!confirmation.equalsIgnoreCase("yes")) {
+                    System.out.println("🔙 Transaction cancelled.");
+                    return;
+                }
+            }
+            
+            System.out.println("\n🔄 Creating transaction...");
+            
+            // Create transaction
+            Transaction transaction = transactionService.createTransaction(
+                walletId, recipientAddress, amountSatoshis, isSimulation
+            );
+            
+            // Show transaction details
+            showTransactionDetails(transaction);
+            
+        } catch (TransactionException e) {
+            System.out.println("❌ Transaction failed: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("❌ Unexpected error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Shows fee estimate information.
+     */
+    private void showFeeEstimate() {
+        System.out.println("\n💵 Transaction Fee Estimates");
+        System.out.println("Network Status: " + networkMonitor.getNetworkStatus());
+        System.out.println();
+        
+        // Estimate for a typical transaction size (226 bytes)
+        int typicalTransactionSize = 226;
+        FeeCalculator.FeeEstimate estimates = feeCalculator.getFeeEstimates(typicalTransactionSize);
+        
+        System.out.println("📊 Estimated fees for typical transaction (~226 bytes):");
+        System.out.println("  🐢 Low priority:   " + estimates.low() + " satoshis (" + 
+                          FeeCalculator.satoshisToBTC(estimates.low()) + " BTC)");
+        System.out.println("  🏃 Medium priority: " + estimates.medium() + " satoshis (" + 
+                          FeeCalculator.satoshisToBTC(estimates.medium()) + " BTC)");
+        System.out.println("  🚀 High priority:  " + estimates.high() + " satoshis (" + 
+                          FeeCalculator.satoshisToBTC(estimates.high()) + " BTC)");
+        System.out.println();
+        
+        FeeCalculator.FeePriority recommendation = networkMonitor.getFeeRecommendation();
+        System.out.println("💡 Recommended priority: " + recommendation);
+        System.out.println();
+    }
+    
+    /**
+     * Shows transaction details.
+     */
+    private void showTransactionDetails(Transaction transaction) {
+        System.out.println("\n✅ Transaction Created Successfully!");
+        System.out.println("📋 Transaction Details:");
+        System.out.println("  ID: " + transaction.transactionId());
+        System.out.println("  Wallet: " + transaction.walletId());
+        System.out.println("  Recipient: " + transaction.recipientAddress());
+        System.out.println("  Amount: " + transaction.getAmountInBTC() + " BTC");
+        System.out.println("  Fee: " + transaction.getFeeInBTC() + " BTC");
+        System.out.println("  Total: " + transaction.getTotalAmount() + " satoshis");
+        System.out.println("  Status: " + transaction.status());
+        System.out.println("  Type: " + (transaction.isSimulation() ? "SIMULATION" : "REAL"));
+        System.out.println("  Created: " + transaction.createdAt());
+        System.out.println();
+        
+        if (transaction.isSimulation()) {
+            System.out.println("ℹ️  This was a SIMULATION. No funds were actually sent.");
+            System.out.println("   To send a real transaction, use 'transaction' command and choose 'real' type.");
+        } else {
+            System.out.println("📡 Transaction broadcasted to Bitcoin network!");
+            System.out.println("   You can check the status with: " + transaction.transactionId());
+        }
+        System.out.println();
     }
 }
