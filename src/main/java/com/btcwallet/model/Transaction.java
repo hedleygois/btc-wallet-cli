@@ -81,13 +81,10 @@ public record Transaction(
      * @return New Transaction instance
      */
     public static Transaction fromTransaction(String walletId, org.bitcoinj.core.Transaction rawTransaction, boolean isSimulation, long fee) {
-        System.out.println("fffffff2222222");
         var transactionHash = rawTransaction.getHashAsString();
-        System.out.println("fffffff");
         var output = rawTransaction.getOutput(0);
         var recipientAddress = output.getScriptPubKey().getToAddress(MainNetParams.get()).toString();
         var amount = output.getValue().getValue();
-        System.out.println("eeeeee");
         // Use the provided fee instead of calculating it
         // This allows the fee to be properly mocked in tests
         

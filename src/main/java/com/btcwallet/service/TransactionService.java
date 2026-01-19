@@ -58,31 +58,24 @@ public class TransactionService {
                 throw TransactionException.invalidTransaction("Wallet not found: " + walletId);
             }
             
-            System.out.println("qhwduihqwdhiuqhwiudqdh");
             // Validate recipient address
             if (!walletService.isValidAddress(recipientAddress)) {
                 throw TransactionException.invalidTransaction("Invalid recipient address: " + recipientAddress);
             }
-            System.out.println("aaaaaaa");
             // Create unsigned transaction
             org.bitcoinj.core.Transaction unsignedTransaction = createUnsignedTransaction(
                 wallet, recipientAddress, amount
             );
-            System.out.println("bbbbb");
             // Calculate fee
             long fee = feeCalculator.calculateFee(unsignedTransaction);
-            System.out.println("cccccc");
             // Sign transaction
             org.bitcoinj.core.Transaction signedTransaction = signTransaction(
                 unsignedTransaction, wallet
             );
-            System.out.println(walletId);
-            System.out.println(unsignedTransaction);
             // Create transaction record with the calculated fee
             Transaction transaction = Transaction.fromTransaction(
                 walletId, signedTransaction, isSimulation, fee
             );
-            System.out.println("dddddd");            
             // Handle based on simulation flag
             if (isSimulation) {
                 return handleSimulation(transaction);
@@ -131,7 +124,6 @@ public class TransactionService {
     ) {
         try {
             ECKey ecKey = wallet.toECKey();
-            System.out.println("ggggggggg");
             // For this simplified example, we'll create a basic signature
             // In a real implementation, this would properly sign the transaction
             // For testing, we'll create a minimal valid script
@@ -156,7 +148,6 @@ public class TransactionService {
             return unsignedTransaction;
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             throw TransactionException.signingFailed("Failed to sign transaction: " + e.getMessage(), e);
         }
     }
