@@ -1,8 +1,11 @@
 package com.btcwallet.service;
 
+import com.btcwallet.exception.BitcoinBroadcastException;
 import com.btcwallet.exception.TransactionException;
+import com.btcwallet.config.BitcoinConfig;
 import com.btcwallet.model.Transaction;
 import com.btcwallet.model.Wallet;
+import com.btcwallet.service.BitcoinNodeClient;
 import org.bitcoinj.core.*;
 
 import org.bitcoinj.params.MainNetParams;
@@ -21,6 +24,7 @@ public class TransactionService {
     private final WalletService walletService;
     private final FeeCalculator feeCalculator;
     private final NetworkMonitor networkMonitor;
+    private final BitcoinNodeClient bitcoinNodeClient;
 
     /**
      * Creates a new TransactionService.
@@ -28,11 +32,14 @@ public class TransactionService {
      * @param walletService Wallet service for accessing wallets
      * @param feeCalculator Fee calculator for determining transaction fees
      * @param networkMonitor Network monitor for checking network conditions
+     * @param bitcoinNodeClient Bitcoin node client for broadcasting transactions
      */
-    public TransactionService(WalletService walletService, FeeCalculator feeCalculator, NetworkMonitor networkMonitor) {
+    public TransactionService(WalletService walletService, FeeCalculator feeCalculator, 
+                            NetworkMonitor networkMonitor, BitcoinNodeClient bitcoinNodeClient) {
         this.walletService = walletService;
         this.feeCalculator = feeCalculator;
         this.networkMonitor = networkMonitor;
+        this.bitcoinNodeClient = bitcoinNodeClient;
     }
 
     /**
@@ -183,8 +190,9 @@ public class TransactionService {
      *
      * @param transaction Transaction to execute
      * @return Transaction with BROADCASTED status
+     * @throws TransactionException If transaction execution fails
      */
-    private Transaction handleRealExecution(Transaction transaction) {
+    private Transaction handleRealExecution(Transaction transaction) throws TransactionException {
         try {
             // Validate transaction
             validateTransaction(transaction.rawTransaction());
@@ -205,8 +213,11 @@ public class TransactionService {
                 transaction.rawTransaction()
             );
 
+        } catch (BitcoinBroadcastException e) {
+            // Wrap our checked exception in the existing TransactionException
+            throw TransactionException.networkError(e.getMessage(), e);
         } catch (Exception e) {
-            throw TransactionException.networkError("Failed to broadcast transaction: " + e.getMessage(), e);
+            throw TransactionException.transactionFailed("Failed to broadcast transaction: " + e.getMessage(), e);
         }
     }
 
@@ -239,23 +250,44 @@ public class TransactionService {
      * Broadcasts a transaction to the Bitcoin network.
      *
      * @param transaction Transaction to broadcast
-     * @throws TransactionException If broadcasting fails
+     * @throws BitcoinBroadcastException If broadcasting fails
+     * @throws IllegalArgumentException If transaction is invalid
      */
-    private void broadcastTransaction(org.bitcoinj.core.Transaction transaction) {
-        // In a real implementation, this would connect to a Bitcoin node
-        // and broadcast the transaction. For this demo, we'll simulate success.
+    private void broadcastTransaction(org.bitcoinj.core.Transaction transaction)
+        throws BitcoinBroadcastException {
         
-        // Check network conditions
-        if (!networkMonitor.isNetworkAvailable()) {
-            throw TransactionException.networkError("Bitcoin network unavailable");
+        // Validate input
+        if (transaction == null) {
+            throw new IllegalArgumentException("Transaction cannot be null");
         }
 
-        if (networkMonitor.getMempoolSize() > 10000) {
-            throw TransactionException.networkError("Network congestion high, try again later");
-        }
+        try {
+            // Check if Bitcoin node connection is enabled
+            if (bitcoinNodeClient.getConfig().isEnabled()) {
+                // Use real Bitcoin node connection
+                bitcoinNodeClient.broadcastTransaction(transaction);
+            } else {
+                // Fallback to simulation mode when node connection is disabled
+                System.out.println("📡 [SIMULATION] Broadcasting transaction: " + 
+                    transaction.getTxId());
+                
+                // Still check network conditions for simulation
+                if (!networkMonitor.isNetworkAvailable()) {
+                    throw BitcoinBroadcastException.networkUnavailable();
+                }
 
-        // Simulate successful broadcast
-        System.out.println("📡 Broadcasting transaction: " + transaction.getHashAsString());
+                if (networkMonitor.getMempoolSize() > 10000) {
+                    throw BitcoinBroadcastException.networkCongestion();
+                }
+            }
+
+        } catch (BitcoinBroadcastException e) {
+            // Re-throw our checked exception
+            throw e;
+        } catch (Exception e) {
+            // Wrap any unexpected exceptions in our checked exception
+            throw BitcoinBroadcastException.broadcastFailed(e.getMessage());
+        }
     }
 
     /**

@@ -1,9 +1,13 @@
 package com.btcwallet.service;
 
+import com.btcwallet.config.BitcoinConfig;
+import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.exception.TransactionException;
 import com.btcwallet.model.Transaction;
 import com.btcwallet.model.Wallet;
+import com.btcwallet.service.BitcoinNodeClient;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +17,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +35,7 @@ class TransactionServiceTest {
 
     @Mock
     private NetworkMonitor networkMonitor;
+    private BitcoinNodeClient bitcoinNodeClient;
 
     private TransactionService transactionService;
 
@@ -37,8 +44,35 @@ class TransactionServiceTest {
     private final String testRecipient = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
 
     @BeforeEach
-    void setUp() {
-        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
+    void setUp() throws BitcoinConfigurationException {
+        // Create a simple BitcoinConfig for testing that doesn't connect to real nodes
+        bitcoinNodeClient = new BitcoinNodeClient(new BitcoinConfig() {
+            @Override
+            public String getNodeHost() { return "localhost"; }
+            
+            @Override
+            public int getNodePort() { return 8333; }
+            
+            @Override
+            public boolean isTestnet() { return false; }
+            
+            @Override
+            public int getTimeoutMillis() { return 5000; }
+            
+            @Override
+            public int getMaxConnections() { return 1; }
+            
+            @Override
+            public boolean isEnabled() { return false; } // Disable real node in tests
+            
+            @Override
+            public boolean isLocalhostPeer() { return true; }
+            
+            @Override
+            public NetworkParameters getNetworkParameters() { return MainNetParams.get(); }
+        });
+        
+        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
 
         // Create test wallet
         ECKey ecKey = new ECKey();

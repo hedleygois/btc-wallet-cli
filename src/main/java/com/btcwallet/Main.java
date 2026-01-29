@@ -1,6 +1,8 @@
 package com.btcwallet;
 
 import com.btcwallet.cli.WalletCLI;
+import com.btcwallet.config.BitcoinConfig;
+import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.exception.WalletException;
 import com.btcwallet.service.*;
 
@@ -15,16 +17,34 @@ public class Main {
         System.out.println("======================================\n");
         
         try {
+            // Load Bitcoin configuration
+            BitcoinConfig bitcoinConfig = new BitcoinConfig();
+            System.out.println("📖 Loaded Bitcoin configuration: " + bitcoinConfig);
+            
+            // Initialize Bitcoin node client
+            BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(bitcoinConfig);
+            
             // Initialize wallet service (default to MainNet)
             WalletService walletService = new WalletService();
             NetworkMonitor networkMonitor = new NetworkMonitor();
             FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
-            TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
             
+            // Initialize transaction service with Bitcoin node client
+            TransactionService transactionService = new TransactionService(
+                walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
+            
+            // Initialize balance service
+            BalanceService balanceService = new BalanceService(bitcoinNodeClient, walletService);
+            walletService.setBalanceService(balanceService);
+
             // Start the CLI interface
-            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
+            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);
             cli.start();
             
+        } catch (BitcoinConfigurationException e) {
+            System.err.println("\n[CONFIG ERROR] " + e.getMessage());
+            System.err.println("Please check your bitcoin.properties file.");
+            System.exit(1);
         } catch (WalletException e) {
             System.err.println("\n[FATAL ERROR] " + e.getMessage());
             System.exit(1);

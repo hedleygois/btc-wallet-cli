@@ -19,6 +19,7 @@ public class WalletCLI {
     private final TransactionService transactionService;
     private final FeeCalculator feeCalculator;
     private final NetworkMonitor networkMonitor;
+    private final BalanceService balanceService;
     private Scanner scanner;
     private boolean running;
     
@@ -29,13 +30,15 @@ public class WalletCLI {
      * @param transactionService Transaction service for transaction operations
      * @param feeCalculator Fee calculator for estimating transaction fees
      * @param networkMonitor Network monitor for checking network conditions
+     * @param balanceService Balance service for checking wallet balances
      */
     public WalletCLI(WalletService walletService, TransactionService transactionService, 
-                    FeeCalculator feeCalculator, NetworkMonitor networkMonitor) {
+                    FeeCalculator feeCalculator, NetworkMonitor networkMonitor, BalanceService balanceService) {
         this.walletService = walletService;
         this.transactionService = transactionService;
         this.feeCalculator = feeCalculator;
         this.networkMonitor = networkMonitor;
+        this.balanceService = balanceService;
         try {
             this.scanner = new Scanner(System.in);
         } catch (Exception e) {
@@ -120,6 +123,11 @@ public class WalletCLI {
                 handleValidateAddress(args);
                 break;
                 
+            case "balance":
+            case "bal":
+                handleCheckBalance(args);
+                break;
+
             case "info":
             case "network":
                 showNetworkInfo();
@@ -155,6 +163,7 @@ public class WalletCLI {
         System.out.println("  generate-mnemonic        - Generate wallet with mnemonic seed phrase");
         System.out.println("  import <key|mnemonic|wif> - Import wallet from private key, mnemonic, or WIF");
         System.out.println("  validate <address>       - Validate a Bitcoin address");
+        System.out.println("  balance <walletId>       - Check wallet balance");
         System.out.println("  info, network            - Show network information");
         System.out.println("  transaction, tx          - Create a new transaction");
         System.out.println("  fee-estimate             - Estimate transaction fees");
@@ -166,9 +175,40 @@ public class WalletCLI {
         System.out.println("  import 5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF");
         System.out.println("  import 'abandon abandon...'");
         System.out.println("  validate 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
+        System.out.println("  balance w-12345678");
         System.out.println("  transaction               - Create a transaction");
         System.out.println("  fee-estimate              - Get fee estimates");
         System.out.println();
+    }
+
+    /**
+     * Handles balance checking.
+     *
+     * @param walletId Wallet ID to check
+     */
+    private void handleCheckBalance(String walletId) {
+        if (walletId.isEmpty()) {
+            System.out.println("❓ Please provide a wallet ID.");
+            System.out.println("   Example: balance w-12345678");
+            return;
+        }
+
+        try {
+            System.out.println("\n🔄 Fetching wallet balance...");
+            com.btcwallet.model.WalletBalance balance = balanceService.getWalletBalance(walletId);
+            
+            System.out.println("✅ Balance retrieved successfully!");
+            System.out.println("💰 Total Balance: " + balance.getBalanceInBTC() + " BTC");
+            System.out.println("✅ Confirmed:     " + balance.getConfirmedBalanceInBTC() + " BTC");
+            System.out.println("⏳ Unconfirmed:   " + balance.getUnconfirmedBalanceInBTC() + " BTC");
+            System.out.println("📅 Last Updated:  " + balance.getLastUpdated());
+            System.out.println("🧱 Block Height:  " + balance.getBlockchainHeight());
+            System.out.println("🔢 UTXO Count:    " + balance.getUtxoCount());
+            System.out.println();
+            
+        } catch (Exception e) {
+            System.out.println("❌ Failed to retrieve balance: " + e.getMessage());
+        }
     }
     
     /**

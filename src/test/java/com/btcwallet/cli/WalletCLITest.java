@@ -1,13 +1,26 @@
 package com.btcwallet.cli;
 
-import com.btcwallet.service.*;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Scanner;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
+import com.btcwallet.config.BitcoinConfig;
+import com.btcwallet.service.BalanceService;
+import com.btcwallet.service.BitcoinNodeClient;
+import com.btcwallet.service.FeeCalculator;
+import com.btcwallet.service.NetworkMonitor;
+import com.btcwallet.service.TransactionService;
+import com.btcwallet.service.WalletService;
 
 class WalletCLITest {
 
@@ -20,8 +33,16 @@ class WalletCLITest {
         assertDoesNotThrow(() -> {
             NetworkMonitor networkMonitor = new NetworkMonitor();
             FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
-            TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
-            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
+            
+            // Create mock BitcoinConfig and BitcoinNodeClient for testing
+            BitcoinConfig mockConfig = mock(BitcoinConfig.class);
+            when(mockConfig.isEnabled()).thenReturn(false); // Disable real node in tests
+            BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(mockConfig);
+            
+            TransactionService transactionService = new TransactionService(
+                walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
+            BalanceService balanceService = mock(BalanceService.class);
+            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);
             assertNotNull(cli);
         });
     }
@@ -32,7 +53,14 @@ class WalletCLITest {
         WalletService walletService = new WalletService();
         NetworkMonitor networkMonitor = new NetworkMonitor();
         FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
-        TransactionService transactionService = new TransactionService(walletService, feeCalculator, networkMonitor);
+        
+        // Create mock BitcoinConfig and BitcoinNodeClient for testing
+        BitcoinConfig mockConfig = mock(BitcoinConfig.class);
+        when(mockConfig.isEnabled()).thenReturn(false); // Disable real node in tests
+        BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(mockConfig);
+        
+        TransactionService transactionService = new TransactionService(
+            walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
         
         // Mock System.in with empty input
         InputStream originalIn = System.in;
@@ -41,7 +69,8 @@ class WalletCLITest {
             
             // When/Then - should handle empty input gracefully
             assertDoesNotThrow(() -> {
-                WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor);
+                BalanceService balanceService = mock(BalanceService.class);
+                WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);
                 assertNotNull(cli);
             });
             

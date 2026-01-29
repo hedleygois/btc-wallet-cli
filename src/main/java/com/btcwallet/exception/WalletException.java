@@ -195,4 +195,25 @@ public class WalletException extends RuntimeException {
     public static WalletException generationFailed(String technicalMessage) {
         return new WalletException(ErrorType.GENERATION_ERROR, "Wallet generation failed: " + technicalMessage);
     }
+
+    /**
+     * Creates a WalletException for balance-related errors.
+     *
+     * @param technicalMessage Technical error details
+     * @return WalletException with appropriate error type and message
+     */
+    public static WalletException balanceError(String technicalMessage) {
+        return new WalletException(ErrorType.NETWORK_ERROR, "Balance operation failed: " + technicalMessage);
+    }
+
+    /**
+     * Creates a WalletException for balance-related errors with cause.
+     *
+     * @param technicalMessage Technical error details
+     * @param cause Original exception cause
+     * @return WalletException with appropriate error type and message
+     */
+    public static WalletException balanceError(String technicalMessage, Throwable cause) {
+        return new WalletException(ErrorType.NETWORK_ERROR, "Balance operation failed: " + technicalMessage, cause);
+    }
 }

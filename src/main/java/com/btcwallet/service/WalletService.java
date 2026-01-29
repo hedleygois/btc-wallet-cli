@@ -1,11 +1,17 @@
 package com.btcwallet.service;
 
+import com.btcwallet.exception.BalanceException;
+import com.btcwallet.exception.WalletException;
 import com.btcwallet.model.Wallet;
+import com.btcwallet.model.WalletBalance;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Main service for wallet operations, combining generation and import functionality.
@@ -16,6 +22,7 @@ public class WalletService {
     private final WalletImporter walletImporter;
     private final NetworkParameters networkParameters;
     private final Map<String, Wallet> walletStorage = new HashMap<>();
+    private BalanceService balanceService;
     
     /**
      * Creates a new WalletService instance.
@@ -34,6 +41,28 @@ public class WalletService {
         this.networkParameters = networkParameters;
         this.walletGenerator = new WalletGenerator(networkParameters);
         this.walletImporter = new WalletImporter(networkParameters);
+    }
+    
+    /**
+     * Creates a new WalletService instance with BalanceService integration.
+     *
+     * @param networkParameters Network parameters to use
+     * @param balanceService Balance service for balance operations
+     */
+    public WalletService(NetworkParameters networkParameters, BalanceService balanceService) {
+        this.networkParameters = networkParameters;
+        this.walletGenerator = new WalletGenerator(networkParameters);
+        this.walletImporter = new WalletImporter(networkParameters);
+        this.balanceService = balanceService;
+    }
+    
+    /**
+     * Sets the BalanceService for this WalletService.
+     *
+     * @param balanceService Balance service to use
+     */
+    public void setBalanceService(BalanceService balanceService) {
+        this.balanceService = balanceService;
     }
     
     /**
@@ -159,5 +188,90 @@ public class WalletService {
      */
     public void clearWallets() {
         walletStorage.clear();
+    }
+
+    /**
+     * Gets the balance for a wallet.
+     * 
+     * @param walletId Wallet ID
+     * @return WalletBalance object
+     * @throws WalletException If balance cannot be retrieved
+     */
+    public WalletBalance getWalletBalance(String walletId) throws WalletException {
+        if (balanceService == null) {
+            throw WalletException.balanceError("Balance service not available");
+        }
+        
+        try {
+            return balanceService.getWalletBalance(walletId);
+        } catch (BalanceException e) {
+            throw WalletException.balanceError("Failed to get balance: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Forces a refresh of the balance for a wallet.
+     * 
+     * @param walletId Wallet ID
+     * @return Updated WalletBalance object
+     * @throws WalletException If balance cannot be refreshed
+     */
+    public WalletBalance refreshWalletBalance(String walletId) throws WalletException {
+        if (balanceService == null) {
+            throw WalletException.balanceError("Balance service not available");
+        }
+        
+        try {
+            return balanceService.refreshWalletBalance(walletId);
+        } catch (BalanceException e) {
+            throw WalletException.balanceError("Failed to refresh balance: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Checks if a wallet has sufficient funds for a transaction.
+     * 
+     * @param walletId Wallet ID
+     * @param amount Amount required (in satoshis)
+     * @return true if sufficient funds, false otherwise
+     * @throws WalletException If balance cannot be checked
+     */
+    public boolean hasSufficientFunds(String walletId, Coin amount) throws WalletException {
+        if (balanceService == null) {
+            return true; // If no balance service, assume sufficient funds (simulation mode)
+        }
+        
+        try {
+            return balanceService.hasSufficientFunds(walletId, amount);
+        } catch (BalanceException e) {
+            throw WalletException.balanceError("Failed to check funds: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gets the total balance across all wallets.
+     * 
+     * @return Total balance across all wallets
+     * @throws WalletException If balance cannot be retrieved
+     */
+    public Coin getTotalBalance() throws WalletException {
+        if (balanceService == null) {
+            throw WalletException.balanceError("Balance service not available");
+        }
+        
+        try {
+            return balanceService.getTotalBalance();
+        } catch (BalanceException e) {
+            throw WalletException.balanceError("Failed to get total balance: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gets all wallet IDs.
+     * 
+     * @return List of wallet IDs
+     */
+    public List<String> listWalletIds() {
+        return new ArrayList<>(walletStorage.keySet());
     }
 }
