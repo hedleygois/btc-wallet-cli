@@ -6,7 +6,11 @@ import com.btcwallet.model.Wallet;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.params.MainNetParams;
 
 import java.util.List;
 import java.util.Optional;
@@ -64,21 +68,31 @@ public class WalletImporter {
             List<String> mnemonicWords = List.of(seedPhrase.trim().split("\\s+"));
             byte[] seed = MnemonicCode.toSeed(mnemonicWords, ""); // Empty passphrase
 
-            // Use proper BIP32/BIP44 derivation for mnemonic seeds
-            // For simplicity, we'll use the first 32 bytes of the seed as the private key
-            // In a production app, you would use proper hierarchical deterministic
-            // derivation
-            if (seed.length > 32) {
-                byte[] privateKeyBytes = new byte[32];
-                System.arraycopy(seed, 0, privateKeyBytes, 0, 32);
-                ECKey ecKey = ECKey.fromPrivate(privateKeyBytes);
-                String walletId = generateWalletId();
-                return Wallet.fromECKey(walletId, ecKey, networkParameters);
-            } else {
-                ECKey ecKey = ECKey.fromPrivate(seed);
-                String walletId = generateWalletId();
-                return Wallet.fromECKey(walletId, ecKey, networkParameters);
-            }
+            // BIP44 Path: m / 44' / coin_type' / account' / change / address_index
+            
+            // 1. Master Key (m)
+            DeterministicKey masterKey = HDKeyDerivation.createMasterPrivateKey(seed);
+            
+            // 2. Purpose (44') - BIP44 standard for HD wallets
+            DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(masterKey, new ChildNumber(44, true));
+            
+            // 3. Coin Type - 0' for MainNet, 1' for TestNet
+            int coinType = networkParameters.equals(MainNetParams.get()) ? 0 : 1;
+            DeterministicKey coinTypeKey = HDKeyDerivation.deriveChildKey(purposeKey, new ChildNumber(coinType, true));
+            
+            // 4. Account (0') - First account
+            DeterministicKey accountKey = HDKeyDerivation.deriveChildKey(coinTypeKey, new ChildNumber(0, true));
+            
+            // 5. Change (0) - 0 for external (receiving) chain, 1 for internal (change) chain
+            DeterministicKey changeKey = HDKeyDerivation.deriveChildKey(accountKey, new ChildNumber(0, false));
+            
+            // 6. Address Index (0) - The first address in the chain
+            DeterministicKey addressKey = HDKeyDerivation.deriveChildKey(changeKey, new ChildNumber(0, false));
+
+            ECKey ecKey = ECKey.fromPrivate(addressKey.getPrivKeyBytes());
+            String walletId = generateWalletId();
+            return Wallet.fromECKey(walletId, ecKey, networkParameters);
+
         } catch (Exception e) {
             if (e.getMessage() != null && (e.getMessage().contains("mnemonic") || e.getMessage().contains("word"))) {
                 throw WalletException.invalidMnemonic("Invalid mnemonic seed phrase: " + e.getMessage());

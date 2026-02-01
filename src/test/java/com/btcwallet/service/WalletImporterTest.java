@@ -3,9 +3,16 @@ package com.btcwallet.service;
 import com.btcwallet.exception.WalletException;
 import com.btcwallet.model.Wallet;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDKeyDerivation;
+import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -51,6 +58,35 @@ class WalletImporterTest {
         assertNotNull(wallet.publicKey());
         assertNotNull(wallet.privateKey());
         assertEquals(TestNet3Params.get(), wallet.networkParameters());
+    }
+
+    @Test
+    void testImportFromMnemonicStandardDerivation() {
+        // Given
+        NetworkParameters params = MainNetParams.get();
+        WalletImporter importer = new WalletImporter(params);
+        String mnemonic = "army van defense carry jealous true garbage claim echo media make crunch";
+        
+        // Calculate EXPECTED address using strict BIP44 standard derivation
+        // m / 44' / 0' / 0' / 0 / 0
+        List<String> words = List.of(mnemonic.split("\\s+"));
+        byte[] seed = MnemonicCode.toSeed(words, "");
+        DeterministicKey masterKey = HDKeyDerivation.createMasterPrivateKey(seed);
+        
+        // Derive: m / 44' / 0' / 0' / 0 / 0
+        DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(masterKey, new ChildNumber(44, true));
+        DeterministicKey coinTypeKey = HDKeyDerivation.deriveChildKey(purposeKey, new ChildNumber(0, true));
+        DeterministicKey accountKey = HDKeyDerivation.deriveChildKey(coinTypeKey, new ChildNumber(0, true));
+        DeterministicKey changeKey = HDKeyDerivation.deriveChildKey(accountKey, new ChildNumber(0, false));
+        DeterministicKey addressKey = HDKeyDerivation.deriveChildKey(changeKey, new ChildNumber(0, false));
+        
+        String expectedAddress = org.bitcoinj.core.LegacyAddress.fromKey(params, addressKey).toString();
+
+        // When
+        Wallet wallet = importer.importFromMnemonic(mnemonic);
+
+        // Then
+        assertEquals(expectedAddress, wallet.address(), "The imported wallet address does not match the standard BIP44 derivation path (m/44'/0'/0'/0/0)");
     }
 
     @Test
