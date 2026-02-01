@@ -2,20 +2,23 @@ package com.btcwallet.service;
 
 import com.btcwallet.exception.WalletException;
 import com.btcwallet.model.Wallet;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.MnemonicCode;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Service for importing existing Bitcoin wallets from private keys or seed phrases.
+ * Service for importing existing Bitcoin wallets from private keys or seed
+ * phrases.
  */
 public class WalletImporter {
-    
+
     private final NetworkParameters networkParameters;
-    
+
     /**
      * Creates a new WalletImporter instance.
      *
@@ -24,7 +27,7 @@ public class WalletImporter {
     public WalletImporter(NetworkParameters networkParameters) {
         this.networkParameters = networkParameters;
     }
-    
+
     /**
      * Imports a wallet from a private key in hex format.
      *
@@ -32,20 +35,19 @@ public class WalletImporter {
      * @return Imported Wallet
      * @throws WalletImportException If the private key is invalid
      */
-    public Wallet importFromPrivateKey(String privateKeyHex) {
+    public Wallet importFromPrivateKey(String privateKeyHex) throws WalletException {
         try {
-            if (privateKeyHex == null || privateKeyHex.trim().isEmpty()) {
-                throw WalletException.invalidPrivateKey("Private key cannot be null or empty");
-            }
-            
-            ECKey ecKey = ECKey.fromPrivate(org.bitcoinj.core.Utils.HEX.decode(privateKeyHex));
+            var keys = Optional.ofNullable(privateKeyHex).filter(key -> !key.isEmpty())
+                    .orElseThrow(() -> WalletException.invalidPrivateKey("Private key cannot be null or empty"));
+
+            ECKey ecKey = ECKey.fromPrivate(org.bitcoinj.core.Utils.HEX.decode(keys));
             String walletId = generateWalletId();
             return Wallet.fromECKey(walletId, ecKey, networkParameters);
         } catch (Exception e) {
             throw WalletException.invalidPrivateKey("Invalid private key format: " + e.getMessage());
         }
     }
-    
+
     /**
      * Imports a wallet from a mnemonic seed phrase.
      *
@@ -53,18 +55,18 @@ public class WalletImporter {
      * @return Imported Wallet
      * @throws WalletImportException If the mnemonic is invalid
      */
-    public Wallet importFromMnemonic(String mnemonic) {
+    public Wallet importFromMnemonic(String mnemonic) throws WalletException {
         try {
-            if (mnemonic == null || mnemonic.trim().isEmpty()) {
-                throw WalletException.invalidMnemonic("Mnemonic seed phrase cannot be null or empty");
-            }
-            
-            List<String> mnemonicWords = List.of(mnemonic.trim().split("\\s+"));
+            var seedPhrase = Optional.ofNullable(mnemonic).filter(key -> !key.isEmpty())
+                    .orElseThrow(() -> WalletException.invalidMnemonic("Mnemonic seed phrase cannot be null or empty"));
+
+            List<String> mnemonicWords = List.of(seedPhrase.trim().split("\\s+"));
             byte[] seed = MnemonicCode.toSeed(mnemonicWords, ""); // Empty passphrase
-            
+
             // Use proper BIP32/BIP44 derivation for mnemonic seeds
             // For simplicity, we'll use the first 32 bytes of the seed as the private key
-            // In a production app, you would use proper hierarchical deterministic derivation
+            // In a production app, you would use proper hierarchical deterministic
+            // derivation
             if (seed.length > 32) {
                 byte[] privateKeyBytes = new byte[32];
                 System.arraycopy(seed, 0, privateKeyBytes, 0, 32);
@@ -84,7 +86,7 @@ public class WalletImporter {
             }
         }
     }
-    
+
     /**
      * Imports a wallet from a WIF (Wallet Import Format) private key.
      *
@@ -92,24 +94,25 @@ public class WalletImporter {
      * @return Imported Wallet
      * @throws WalletImportException If the WIF key is invalid
      */
-    public Wallet importFromWIF(String wifPrivateKey) {
+    public Wallet importFromWIF(String wifPrivateKey) throws WalletException {
         try {
-            if (wifPrivateKey == null || wifPrivateKey.trim().isEmpty()) {
-                throw WalletException.invalidPrivateKey("WIF private key cannot be null or empty");
-            }
-            
+            var wifKey = Optional.ofNullable(wifPrivateKey).filter(key -> !key.isEmpty())
+                    .orElseThrow(() -> WalletException.invalidPrivateKey("WIF private key cannot be null or empty"));
+
+            // TODO Implement WIF decoding to get the private key bytes
             // Note: WIF import requires proper Base58 decoding and checksum validation
             // This is a simplified placeholder - a real implementation would need:
             // 1. Base58 decoding
-            // 2. Checksum validation  
+            // 2. Checksum validation
             // 3. Network byte handling
             // 4. Proper key reconstruction
-            throw new WalletException(WalletException.ErrorType.INVALID_INPUT, "WIF import not fully implemented in this version");
+            throw new WalletException(WalletException.ErrorType.INVALID_INPUT,
+                    "WIF import not fully implemented in this version");
         } catch (Exception e) {
             throw WalletException.invalidPrivateKey("Invalid WIF private key format: " + e.getMessage());
         }
     }
-    
+
     /**
      * Generates a unique wallet ID.
      *
@@ -118,6 +121,5 @@ public class WalletImporter {
     private String generateWalletId() {
         return "IMPORTED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
-    
 
 }
