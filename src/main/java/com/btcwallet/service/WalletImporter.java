@@ -3,6 +3,7 @@ package com.btcwallet.service;
 import com.btcwallet.exception.WalletException;
 import com.btcwallet.model.Wallet;
 
+import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.MnemonicCode;
@@ -99,17 +100,14 @@ public class WalletImporter {
             var wifKey = Optional.ofNullable(wifPrivateKey).filter(key -> !key.isEmpty())
                     .orElseThrow(() -> WalletException.invalidPrivateKey("WIF private key cannot be null or empty"));
 
-            // TODO Implement WIF decoding to get the private key bytes
-            // Note: WIF import requires proper Base58 decoding and checksum validation
-            // This is a simplified placeholder - a real implementation would need:
-            // 1. Base58 decoding
-            // 2. Checksum validation
-            // 3. Network byte handling
-            // 4. Proper key reconstruction
-            throw new WalletException(WalletException.ErrorType.INVALID_INPUT,
-                    "WIF import not fully implemented in this version");
-        } catch (Exception e) {
+            DumpedPrivateKey dumpedPrivateKey = DumpedPrivateKey.fromBase58(networkParameters, wifKey);
+            ECKey ecKey = dumpedPrivateKey.getKey();
+            String walletId = generateWalletId();
+            return Wallet.fromECKey(walletId, ecKey, networkParameters);
+        } catch (org.bitcoinj.core.AddressFormatException e) {
             throw WalletException.invalidPrivateKey("Invalid WIF private key format: " + e.getMessage());
+        } catch (Exception e) {
+            throw WalletException.importFailed("Failed to import wallet from WIF: " + e.getMessage());
         }
     }
 
