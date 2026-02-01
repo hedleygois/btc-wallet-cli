@@ -118,15 +118,18 @@ class WalletServiceTest {
     void testImportFromWIF() {
         // Given
         WalletService service = new WalletService();
-        String wifPrivateKey = "L3p8oAcQTtuokSCJ36iKm7F2YfXwJra3T9a3H3X7sJ4F5J6J7K8"; // Example WIF
+        ECKey key = new ECKey();
+        String wifPrivateKey = key.getPrivateKeyAsWiF(MainNetParams.get());
 
-        // When/Then - WIF import is not fully implemented in this version
-        WalletException exception = assertThrows(WalletException.class, () -> {
-            service.importFromWIF(wifPrivateKey);
-        });
-        
-        assertEquals(WalletException.ErrorType.INVALID_INPUT, exception.getErrorType());
-        assertTrue(exception.getMessage().contains("WIF import not fully implemented"));
+        // When
+        Wallet wallet = service.importFromWIF(wifPrivateKey);
+
+        // Then
+        assertNotNull(wallet);
+        assertNotNull(wallet.walletId());
+        assertTrue(wallet.walletId().startsWith("IMPORTED-"));
+        assertEquals(key.getPublicKeyAsHex(), wallet.publicKey());
+        assertEquals(key.getPrivateKeyAsHex(), wallet.privateKey());
     }
 
     @Test
