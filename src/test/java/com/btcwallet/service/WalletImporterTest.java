@@ -1,7 +1,9 @@
 package com.btcwallet.service;
 
-import com.btcwallet.exception.WalletException;
-import com.btcwallet.model.Wallet;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletException;
+import com.btcwallet.wallet.WalletImporter;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;

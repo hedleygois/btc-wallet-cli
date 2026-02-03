@@ -1,9 +1,10 @@
-package com.btcwallet.service;
+package com.btcwallet.wallet;
 
-import com.btcwallet.exception.BalanceException;
-import com.btcwallet.exception.WalletException;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.model.WalletBalance;
+import com.btcwallet.balance.BalanceException;
+import com.btcwallet.balance.BalanceService;
+import com.btcwallet.balance.WalletBalance;
+import com.btcwallet.wallet.WalletGenerator.WalletGenerationResult;
+
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;

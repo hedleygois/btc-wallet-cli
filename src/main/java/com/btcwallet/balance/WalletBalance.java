@@ -1,11 +1,10 @@
-package com.btcwallet.model;
-
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.TransactionOutput;
+package com.btcwallet.balance;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+
+import org.bitcoinj.core.Coin;
 
 /**
  * Represents the balance information for a Bitcoin wallet.

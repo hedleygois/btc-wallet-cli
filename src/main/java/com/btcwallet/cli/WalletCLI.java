@@ -1,10 +1,16 @@
 package com.btcwallet.cli;
 
-import com.btcwallet.exception.TransactionException;
-import com.btcwallet.exception.WalletException;
-import com.btcwallet.model.Transaction;
-import com.btcwallet.model.Wallet;
+import com.btcwallet.balance.BalanceService;
+import com.btcwallet.network.FeeCalculator;
+import com.btcwallet.network.NetworkMonitor;
 import com.btcwallet.service.*;
+import com.btcwallet.transaction.Transaction;
+import com.btcwallet.transaction.TransactionException;
+import com.btcwallet.transaction.TransactionService;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletException;
+import com.btcwallet.wallet.WalletGenerator;
+import com.btcwallet.wallet.WalletService;
 
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -195,7 +201,7 @@ public class WalletCLI {
 
         try {
             System.out.println("\n🔄 Fetching wallet balance...");
-            com.btcwallet.model.WalletBalance balance = balanceService.getWalletBalance(walletId);
+            com.btcwallet.balance.WalletBalance balance = balanceService.getWalletBalance(walletId);
             
             System.out.println("✅ Balance retrieved successfully!");
             System.out.println("💰 Total Balance: " + balance.getBalanceInBTC() + " BTC");

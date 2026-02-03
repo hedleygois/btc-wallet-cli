@@ -1,10 +1,14 @@
-package com.btcwallet.service;
+package com.btcwallet.transaction;
 
-import com.btcwallet.exception.BitcoinBroadcastException;
-import com.btcwallet.exception.TransactionException;
-import com.btcwallet.model.Transaction;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.model.WalletBalance;
+import com.btcwallet.balance.BalanceService;
+import com.btcwallet.balance.WalletBalance;
+import com.btcwallet.network.BitcoinBroadcastException;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.network.FeeCalculator;
+import com.btcwallet.network.NetworkMonitor;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.core.*;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;

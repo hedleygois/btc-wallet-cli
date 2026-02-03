@@ -1,4 +1,4 @@
-package com.btcwallet.model;
+package com.btcwallet.wallet;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;

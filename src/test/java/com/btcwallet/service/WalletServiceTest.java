@@ -1,7 +1,10 @@
 package com.btcwallet.service;
 
-import com.btcwallet.exception.WalletException;
-import com.btcwallet.model.Wallet;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletException;
+import com.btcwallet.wallet.WalletGenerator;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;

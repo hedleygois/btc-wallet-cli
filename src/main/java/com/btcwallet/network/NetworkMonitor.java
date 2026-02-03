@@ -1,9 +1,11 @@
-package com.btcwallet.service;
+package com.btcwallet.network;
 
 
 
 import java.io.IOException;
 import java.util.Random;
+
+import com.btcwallet.network.FeeCalculator.FeePriority;
 
 /**
  * Monitors Bitcoin network conditions.

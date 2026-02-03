@@ -1,11 +1,12 @@
 package com.btcwallet.model;
 
-import com.btcwallet.model.Transaction;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.params.MainNetParams;
 import org.junit.jupiter.api.Test;
+
+import com.btcwallet.transaction.Transaction;
 
 import java.time.Instant;
 
@@ -26,9 +27,9 @@ class TransactionTest {
         Instant createdAt = Instant.now();
         
         // When
-        com.btcwallet.model.Transaction transaction = new com.btcwallet.model.Transaction(
+        com.btcwallet.transaction.Transaction transaction = new com.btcwallet.transaction.Transaction(
             transactionId, testWalletId, testRecipient, amount, fee,
-            com.btcwallet.model.Transaction.TransactionStatus.PENDING, createdAt, true, null
+            com.btcwallet.transaction.Transaction.TransactionStatus.PENDING, createdAt, true, null
         );
         
         // Then
@@ -155,7 +156,7 @@ class TransactionTest {
         bitcoinJTransaction.addOutput(Coin.valueOf(100000), address);
         
         // When
-        com.btcwallet.model.Transaction transaction = com.btcwallet.model.Transaction.fromTransaction(
+        com.btcwallet.transaction.Transaction transaction = com.btcwallet.transaction.Transaction.fromTransaction(
             testWalletId, bitcoinJTransaction, true, 5000L
         );
         

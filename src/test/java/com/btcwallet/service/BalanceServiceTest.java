@@ -1,8 +1,12 @@
 package com.btcwallet.service;
 
-import com.btcwallet.exception.BalanceException;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.model.WalletBalance;
+import com.btcwallet.balance.BalanceException;
+import com.btcwallet.balance.BalanceService;
+import com.btcwallet.balance.WalletBalance;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.core.Coin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

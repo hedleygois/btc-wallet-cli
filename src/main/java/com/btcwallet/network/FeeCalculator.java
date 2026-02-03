@@ -1,4 +1,4 @@
-package com.btcwallet.service;
+package com.btcwallet.network;
 
 import org.bitcoinj.core.Transaction;
 

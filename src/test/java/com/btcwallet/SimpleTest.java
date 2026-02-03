@@ -1,8 +1,9 @@
 package com.btcwallet;
 
-import com.btcwallet.model.Wallet;
-import com.btcwallet.service.WalletGenerator;
-import com.btcwallet.service.WalletService;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletGenerator;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.params.MainNetParams;
 
 /**

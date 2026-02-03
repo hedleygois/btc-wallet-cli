@@ -1,8 +1,9 @@
-package com.btcwallet.service;
+package com.btcwallet.balance;
 
-import com.btcwallet.exception.BalanceException;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.model.WalletBalance;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.core.Coin;
 
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package com.btcwallet.exception;
+package com.btcwallet.balance;
 
 /**
  * Custom checked exception for balance-related operations.

@@ -1,12 +1,18 @@
 package com.btcwallet.service;
 
+import com.btcwallet.balance.BalanceException;
+import com.btcwallet.balance.BalanceService;
 import com.btcwallet.config.BitcoinConfig;
-import com.btcwallet.exception.BalanceException;
 import com.btcwallet.exception.BitcoinConfigurationException;
-import com.btcwallet.exception.TransactionException;
-import com.btcwallet.model.Transaction;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.service.BitcoinNodeClient;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.network.FeeCalculator;
+import com.btcwallet.network.NetworkMonitor;
+import com.btcwallet.transaction.Transaction;
+import com.btcwallet.transaction.TransactionException;
+import com.btcwallet.transaction.TransactionService;
+import com.btcwallet.wallet.Wallet;
+import com.btcwallet.wallet.WalletService;
+
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
@@ -108,13 +114,13 @@ class TransactionServiceTest {
         long fee = 5000; // 0.00005 BTC
 
         // Mock UTXOs: one large UTXO of 200,000 satoshis
-        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+        com.btcwallet.balance.WalletBalance.UTXO utxo = new com.btcwallet.balance.WalletBalance.UTXO(
                 "0000000000000000000000000000000000000000000000000000000000000000",
                 0,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 "scriptPubKey",
                 10);
-        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+        com.btcwallet.balance.WalletBalance balance = new com.btcwallet.balance.WalletBalance(
                 testWalletId,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 org.bitcoinj.core.Coin.ZERO,
@@ -156,13 +162,13 @@ class TransactionServiceTest {
         long fee = 5000; // 0.00005 BTC
 
         // Mock UTXO
-        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+        com.btcwallet.balance.WalletBalance.UTXO utxo = new com.btcwallet.balance.WalletBalance.UTXO(
                 "0000000000000000000000000000000000000000000000000000000000000000",
                 0,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 "scriptPubKey",
                 10);
-        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+        com.btcwallet.balance.WalletBalance balance = new com.btcwallet.balance.WalletBalance(
                 testWalletId,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 org.bitcoinj.core.Coin.ZERO,
@@ -198,13 +204,13 @@ class TransactionServiceTest {
         long fee = 5000; // 0.00005 BTC
 
         // Mock UTXO
-        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+        com.btcwallet.balance.WalletBalance.UTXO utxo = new com.btcwallet.balance.WalletBalance.UTXO(
                 "0000000000000000000000000000000000000000000000000000000000000000",
                 0,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 "scriptPubKey",
                 10);
-        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+        com.btcwallet.balance.WalletBalance balance = new com.btcwallet.balance.WalletBalance(
                 testWalletId,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 org.bitcoinj.core.Coin.ZERO,
@@ -284,13 +290,13 @@ class TransactionServiceTest {
     void testCreateTransactionNetworkUnavailable() throws Exception {
         // Given
         // Mock UTXO
-        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+        com.btcwallet.balance.WalletBalance.UTXO utxo = new com.btcwallet.balance.WalletBalance.UTXO(
                 "0000000000000000000000000000000000000000000000000000000000000000",
                 0,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 "scriptPubKey",
                 10);
-        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+        com.btcwallet.balance.WalletBalance balance = new com.btcwallet.balance.WalletBalance(
                 testWalletId,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 org.bitcoinj.core.Coin.ZERO,
@@ -341,13 +347,13 @@ class TransactionServiceTest {
     void testTransactionValidation() throws Exception {
         // Given
         // Mock UTXO
-        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+        com.btcwallet.balance.WalletBalance.UTXO utxo = new com.btcwallet.balance.WalletBalance.UTXO(
                 "0000000000000000000000000000000000000000000000000000000000000000",
                 0,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 "scriptPubKey",
                 10);
-        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+        com.btcwallet.balance.WalletBalance balance = new com.btcwallet.balance.WalletBalance(
                 testWalletId,
                 org.bitcoinj.core.Coin.valueOf(200000),
                 org.bitcoinj.core.Coin.ZERO,

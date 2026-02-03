@@ -1,4 +1,4 @@
-package com.btcwallet.model;
+package com.btcwallet.transaction;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Sha256Hash;

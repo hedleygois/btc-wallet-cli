@@ -1,4 +1,4 @@
-package com.btcwallet.exception;
+package com.btcwallet.wallet;
 
 /**
  * Base exception for wallet-related errors.

@@ -1,7 +1,4 @@
-package com.btcwallet.service;
-
-import com.btcwallet.exception.WalletException;
-import com.btcwallet.model.Wallet;
+package com.btcwallet.wallet;
 
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;

@@ -14,13 +14,13 @@ import java.util.Scanner;
 
 import org.junit.jupiter.api.Test;
 
+import com.btcwallet.balance.BalanceService;
 import com.btcwallet.config.BitcoinConfig;
-import com.btcwallet.service.BalanceService;
-import com.btcwallet.service.BitcoinNodeClient;
-import com.btcwallet.service.FeeCalculator;
-import com.btcwallet.service.NetworkMonitor;
-import com.btcwallet.service.TransactionService;
-import com.btcwallet.service.WalletService;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.network.FeeCalculator;
+import com.btcwallet.network.NetworkMonitor;
+import com.btcwallet.transaction.TransactionService;
+import com.btcwallet.wallet.WalletService;
 
 class WalletCLITest {
 

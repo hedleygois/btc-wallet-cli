@@ -1,10 +1,16 @@
 package com.btcwallet;
 
+import com.btcwallet.balance.BalanceService;
 import com.btcwallet.cli.WalletCLI;
 import com.btcwallet.config.BitcoinConfig;
 import com.btcwallet.exception.BitcoinConfigurationException;
-import com.btcwallet.exception.WalletException;
+import com.btcwallet.network.BitcoinNodeClient;
+import com.btcwallet.network.FeeCalculator;
+import com.btcwallet.network.NetworkMonitor;
 import com.btcwallet.service.*;
+import com.btcwallet.transaction.TransactionService;
+import com.btcwallet.wallet.WalletException;
+import com.btcwallet.wallet.WalletService;
 
 /**
  * Main entry point for the BTC Wallet Management Application.

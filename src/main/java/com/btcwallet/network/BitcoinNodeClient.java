@@ -1,9 +1,9 @@
-package com.btcwallet.service;
+package com.btcwallet.network;
 
+import com.btcwallet.balance.WalletBalance;
 import com.btcwallet.config.BitcoinConfig;
-import com.btcwallet.exception.BitcoinBroadcastException;
-import com.btcwallet.model.Wallet;
-import com.btcwallet.model.WalletBalance;
+import com.btcwallet.wallet.Wallet;
+
 import org.bitcoinj.core.*;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -24,7 +24,6 @@ import java.util.concurrent.TimeoutException;
 public class BitcoinNodeClient {
     private final BitcoinConfig config;
     private PeerGroup peerGroup;
-    private Context context;
     private BlockChain blockChain;
 
     /**
@@ -48,9 +47,6 @@ public class BitcoinNodeClient {
         }
 
         try {
-            // Create BitcoinJ context
-            this.context = new Context(config.getNetworkParameters());
-
             // Create block chain with memory store
             this.blockChain = new BlockChain(
                 config.getNetworkParameters(), 

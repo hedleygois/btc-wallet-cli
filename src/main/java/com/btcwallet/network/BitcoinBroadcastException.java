@@ -1,4 +1,4 @@
-package com.btcwallet.exception;
+package com.btcwallet.network;
 
 /**
  * Custom checked exception for Bitcoin broadcast failures.
