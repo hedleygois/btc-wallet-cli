@@ -1,9 +1,11 @@
 package com.btcwallet.cli;
 
+import java.util.NoSuchElementException;
+import java.util.Scanner;
+
 import com.btcwallet.balance.BalanceService;
 import com.btcwallet.network.FeeCalculator;
 import com.btcwallet.network.NetworkMonitor;
-import com.btcwallet.service.*;
 import com.btcwallet.transaction.Transaction;
 import com.btcwallet.transaction.TransactionException;
 import com.btcwallet.transaction.TransactionService;
@@ -11,9 +13,6 @@ import com.btcwallet.wallet.Wallet;
 import com.btcwallet.wallet.WalletException;
 import com.btcwallet.wallet.WalletGenerator;
 import com.btcwallet.wallet.WalletService;
-
-import java.util.NoSuchElementException;
-import java.util.Scanner;
 
 /**
  * Command Line Interface for the BTC Wallet Management App.

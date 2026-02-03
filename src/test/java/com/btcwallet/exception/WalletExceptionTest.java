@@ -2,6 +2,8 @@ package com.btcwallet.exception;
 
 import org.junit.jupiter.api.Test;
 
+import com.btcwallet.wallet.WalletException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class WalletExceptionTest {

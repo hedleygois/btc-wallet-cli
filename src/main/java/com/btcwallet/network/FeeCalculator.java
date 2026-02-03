@@ -1,7 +1,5 @@
 package com.btcwallet.network;
 
-import org.bitcoinj.core.Transaction;
-
 /**
  * Calculates transaction fees based on network conditions.
  * Provides fee estimates for different priority levels.

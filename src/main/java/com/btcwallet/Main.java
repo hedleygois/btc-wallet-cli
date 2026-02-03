@@ -7,7 +7,6 @@ import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.network.BitcoinNodeClient;
 import com.btcwallet.network.FeeCalculator;
 import com.btcwallet.network.NetworkMonitor;
-import com.btcwallet.service.*;
 import com.btcwallet.transaction.TransactionService;
 import com.btcwallet.wallet.WalletException;
 import com.btcwallet.wallet.WalletService;
