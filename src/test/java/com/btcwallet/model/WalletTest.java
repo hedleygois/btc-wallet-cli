@@ -5,6 +5,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.junit.jupiter.api.Test;
+import com.btcwallet.wallet.Wallet;
 
 import java.time.Instant;
 
