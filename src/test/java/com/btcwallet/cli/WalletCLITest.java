@@ -40,7 +40,7 @@ class WalletCLITest {
             BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(mockConfig);
             
             TransactionService transactionService = new TransactionService(
-                walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
+                walletService, feeCalculator, networkMonitor, bitcoinNodeClient, mock(BalanceService.class));
             BalanceService balanceService = mock(BalanceService.class);
             WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);
             assertNotNull(cli);
@@ -60,7 +60,7 @@ class WalletCLITest {
         BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(mockConfig);
         
         TransactionService transactionService = new TransactionService(
-            walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
+            walletService, feeCalculator, networkMonitor, bitcoinNodeClient, mock(BalanceService.class));
         
         // Mock System.in with empty input
         InputStream originalIn = System.in;

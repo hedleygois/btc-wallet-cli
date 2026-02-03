@@ -29,13 +29,13 @@ public class Main {
             NetworkMonitor networkMonitor = new NetworkMonitor();
             FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
             
-            // Initialize transaction service with Bitcoin node client
-            TransactionService transactionService = new TransactionService(
-                walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
-            
             // Initialize balance service
             BalanceService balanceService = new BalanceService(bitcoinNodeClient, walletService);
             walletService.setBalanceService(balanceService);
+            
+            // Initialize transaction service with Bitcoin node client and balance service
+            TransactionService transactionService = new TransactionService(
+                walletService, feeCalculator, networkMonitor, bitcoinNodeClient, balanceService);
 
             // Start the CLI interface
             WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);

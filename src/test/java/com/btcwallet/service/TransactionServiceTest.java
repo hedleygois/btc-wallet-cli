@@ -1,6 +1,7 @@
 package com.btcwallet.service;
 
 import com.btcwallet.config.BitcoinConfig;
+import com.btcwallet.exception.BalanceException;
 import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.exception.TransactionException;
 import com.btcwallet.model.Transaction;
@@ -35,6 +36,10 @@ class TransactionServiceTest {
 
     @Mock
     private NetworkMonitor networkMonitor;
+
+    @Mock
+    private BalanceService balanceService;
+
     private BitcoinNodeClient bitcoinNodeClient;
 
     private TransactionService transactionService;
@@ -48,31 +53,48 @@ class TransactionServiceTest {
         // Create a simple BitcoinConfig for testing that doesn't connect to real nodes
         bitcoinNodeClient = new BitcoinNodeClient(new BitcoinConfig() {
             @Override
-            public String getNodeHost() { return "localhost"; }
-            
+            public String getNodeHost() {
+                return "localhost";
+            }
+
             @Override
-            public int getNodePort() { return 8333; }
-            
+            public int getNodePort() {
+                return 8333;
+            }
+
             @Override
-            public boolean isTestnet() { return false; }
-            
+            public boolean isTestnet() {
+                return false;
+            }
+
             @Override
-            public int getTimeoutMillis() { return 5000; }
-            
+            public int getTimeoutMillis() {
+                return 5000;
+            }
+
             @Override
-            public int getMaxConnections() { return 1; }
-            
+            public int getMaxConnections() {
+                return 1;
+            }
+
             @Override
-            public boolean isEnabled() { return false; } // Disable real node in tests
-            
+            public boolean isEnabled() {
+                return false;
+            } // Disable real node in tests
+
             @Override
-            public boolean isLocalhostPeer() { return true; }
-            
+            public boolean isLocalhostPeer() {
+                return true;
+            }
+
             @Override
-            public NetworkParameters getNetworkParameters() { return MainNetParams.get(); }
+            public NetworkParameters getNetworkParameters() {
+                return MainNetParams.get();
+            }
         });
-        
-        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
+
+        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient,
+                balanceService);
 
         // Create test wallet
         ECKey ecKey = new ECKey();
@@ -80,14 +102,79 @@ class TransactionServiceTest {
     }
 
     @Test
-    void testCreateTransactionSimulation() {
+    void testCreateTransactionWithInputsAndChange() throws Exception {
         // Given
         long amount = 100000; // 0.001 BTC
         long fee = 5000; // 0.00005 BTC
 
-        // Mock wallet service
+        // Mock UTXOs: one large UTXO of 200,000 satoshis
+        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                0,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                "scriptPubKey",
+                10);
+        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+                testWalletId,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                org.bitcoinj.core.Coin.ZERO,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                java.time.Instant.now(),
+                "100",
+                java.util.List.of(utxo));
+
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
+        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(feeCalculator.calculateFee(any())).thenReturn(fee);
+
+        // When
+        Transaction transaction = transactionService.createTransaction(
+                testWalletId, testRecipient, amount, true);
+
+        // Then
+        assertNotNull(transaction);
+        org.bitcoinj.core.Transaction rawTx = transaction.rawTransaction();
+
+        // Should have 1 input (from our mock UTXO)
+        assertEquals(1, rawTx.getInputs().size());
+
+        // Should have 2 outputs: recipient + change
+        assertEquals(2, rawTx.getOutputs().size());
+
+        // Recipient output
+        assertEquals(amount, rawTx.getOutput(0).getValue().getValue());
+
+        // Change output: 200,000 - 100,000 - 5,000 = 95,000
+        assertEquals(95000, rawTx.getOutput(1).getValue().getValue());
+    }
+
+    @Test
+    void testCreateTransactionSimulation() throws Exception {
+        // Given
+        long amount = 100000; // 0.001 BTC
+        long fee = 5000; // 0.00005 BTC
+
+        // Mock UTXO
+        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                0,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                "scriptPubKey",
+                10);
+        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+                testWalletId,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                org.bitcoinj.core.Coin.ZERO,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                java.time.Instant.now(),
+                "100",
+                java.util.List.of(utxo));
+
+        // Mock services
+        when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
+        when(walletService.isValidAddress(testRecipient)).thenReturn(true);
+        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any(org.bitcoinj.core.Transaction.class))).thenReturn(fee);
 
         // When
@@ -105,14 +192,31 @@ class TransactionServiceTest {
     }
 
     @Test
-    void testCreateTransactionReal() {
+    void testCreateTransactionReal() throws Exception {
         // Given
         long amount = 100000; // 0.001 BTC
         long fee = 5000; // 0.00005 BTC
 
+        // Mock UTXO
+        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                0,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                "scriptPubKey",
+                10);
+        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+                testWalletId,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                org.bitcoinj.core.Coin.ZERO,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                java.time.Instant.now(),
+                "100",
+                java.util.List.of(utxo));
+
         // Mock services
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
+        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any(org.bitcoinj.core.Transaction.class))).thenReturn(fee);
         when(networkMonitor.isNetworkAvailable()).thenReturn(true);
         when(networkMonitor.getMempoolSize()).thenReturn(3000);
@@ -177,23 +281,39 @@ class TransactionServiceTest {
     }
 
     @Test
-    void testCreateTransactionNetworkUnavailable() {
+    void testCreateTransactionNetworkUnavailable() throws Exception {
         // Given
+        // Mock UTXO
+        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                0,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                "scriptPubKey",
+                10);
+        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+                testWalletId,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                org.bitcoinj.core.Coin.ZERO,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                java.time.Instant.now(),
+                "100",
+                java.util.List.of(utxo));
+
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
+        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(networkMonitor.isNetworkAvailable()).thenReturn(false);
-        
+
         // Mock the transaction creation to bypass BitcoinJ signing issues
         // We want to test network availability, not transaction signing
         when(feeCalculator.calculateFee(any())).thenReturn(5000L);
-        
+
         // When/Then
         TransactionException exception = assertThrows(TransactionException.class, () -> {
             transactionService.createTransaction(
-                testWalletId, testRecipient, 100000, false
-            );
+                    testWalletId, testRecipient, 100000, false);
         });
-        
+
         // Verify it's a network-related error
         assertTrue(exception.getMessage().toLowerCase().contains("network"));
     }
@@ -218,11 +338,33 @@ class TransactionServiceTest {
     }
 
     @Test
-    void testTransactionValidation() {
-        // Test that validation catches invalid transactions
+    void testTransactionValidation() throws Exception {
+        // Given
+        // Mock UTXO
+        com.btcwallet.model.WalletBalance.UTXO utxo = new com.btcwallet.model.WalletBalance.UTXO(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                0,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                "scriptPubKey",
+                10);
+        com.btcwallet.model.WalletBalance balance = new com.btcwallet.model.WalletBalance(
+                testWalletId,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                org.bitcoinj.core.Coin.ZERO,
+                org.bitcoinj.core.Coin.valueOf(200000),
+                java.time.Instant.now(),
+                "100",
+                java.util.List.of(utxo));
+
+        when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
+        when(walletService.isValidAddress(testRecipient)).thenReturn(true);
+        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(feeCalculator.calculateFee(any())).thenReturn(5000L);
+
+        // Test that validation catches invalid transactions (e.g. amount too high)
         assertThrows(TransactionException.class, () -> {
             transactionService.createTransaction(
-                    testWalletId, testRecipient, 100000, true);
+                    testWalletId, testRecipient, 500000, true);
         });
     }
 }

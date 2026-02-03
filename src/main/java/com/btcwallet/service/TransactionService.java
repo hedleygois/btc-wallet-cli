@@ -2,18 +2,17 @@ package com.btcwallet.service;
 
 import com.btcwallet.exception.BitcoinBroadcastException;
 import com.btcwallet.exception.TransactionException;
-import com.btcwallet.config.BitcoinConfig;
 import com.btcwallet.model.Transaction;
 import com.btcwallet.model.Wallet;
-import com.btcwallet.service.BitcoinNodeClient;
+import com.btcwallet.model.WalletBalance;
 import org.bitcoinj.core.*;
-
-import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.core.Transaction.SigHash;
+import org.bitcoinj.crypto.TransactionSignature;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service for creating and managing Bitcoin transactions.
@@ -25,137 +24,167 @@ public class TransactionService {
     private final FeeCalculator feeCalculator;
     private final NetworkMonitor networkMonitor;
     private final BitcoinNodeClient bitcoinNodeClient;
+    private final BalanceService balanceService;
 
     /**
      * Creates a new TransactionService.
      *
-     * @param walletService Wallet service for accessing wallets
-     * @param feeCalculator Fee calculator for determining transaction fees
-     * @param networkMonitor Network monitor for checking network conditions
+     * @param walletService     Wallet service for accessing wallets
+     * @param feeCalculator     Fee calculator for determining transaction fees
+     * @param networkMonitor    Network monitor for checking network conditions
      * @param bitcoinNodeClient Bitcoin node client for broadcasting transactions
+     * @param balanceService    Balance service for UTXO management
      */
-    public TransactionService(WalletService walletService, FeeCalculator feeCalculator, 
-                            NetworkMonitor networkMonitor, BitcoinNodeClient bitcoinNodeClient) {
+    public TransactionService(WalletService walletService, FeeCalculator feeCalculator,
+            NetworkMonitor networkMonitor, BitcoinNodeClient bitcoinNodeClient,
+            BalanceService balanceService) {
         this.walletService = walletService;
         this.feeCalculator = feeCalculator;
         this.networkMonitor = networkMonitor;
         this.bitcoinNodeClient = bitcoinNodeClient;
+        this.balanceService = balanceService;
     }
 
     /**
      * Creates a new transaction.
      * Defaults to simulation mode for safety.
      *
-     * @param walletId Wallet ID to use for the transaction
+     * @param walletId         Wallet ID to use for the transaction
      * @param recipientAddress Bitcoin address of the recipient
-     * @param amount Amount to send in satoshis
-     * @param isSimulation Whether to simulate (true) or execute (false) the transaction
+     * @param amount           Amount to send in satoshis
+     * @param isSimulation     Whether to simulate (true) or execute (false) the
+     *                         transaction
      * @return Created transaction
      * @throws TransactionException If transaction creation fails
      */
-    public Transaction createTransaction(String walletId, String recipientAddress, long amount, boolean isSimulation) {
+    public Transaction createTransaction(String walletId, String recipientAddress, long amount, boolean isSimulation)
+            throws TransactionException {
         try {
-            // Validate inputs
             if (amount <= 0) {
                 throw TransactionException.invalidTransaction("Amount must be positive");
             }
-            // Get wallet
-            Wallet wallet = walletService.getWallet(walletId);
-            if (wallet == null) {
-                throw TransactionException.invalidTransaction("Wallet not found: " + walletId);
-            }
-            
-            // Validate recipient address
+
+            Wallet wallet = Optional.ofNullable(walletService.getWallet(walletId))
+                    .orElseThrow(() -> TransactionException.invalidTransaction("Wallet not found: " + walletId));
+
             if (!walletService.isValidAddress(recipientAddress)) {
                 throw TransactionException.invalidTransaction("Invalid recipient address: " + recipientAddress);
             }
-            // Create unsigned transaction
-            org.bitcoinj.core.Transaction unsignedTransaction = createUnsignedTransaction(
-                wallet, recipientAddress, amount
-            );
-            // Calculate fee
-            long fee = feeCalculator.calculateFee(unsignedTransaction);
-            // Sign transaction
-            org.bitcoinj.core.Transaction signedTransaction = signTransaction(
-                unsignedTransaction, wallet
-            );
-            // Create transaction record with the calculated fee
-            Transaction transaction = Transaction.fromTransaction(
-                walletId, signedTransaction, isSimulation, fee
-            );
-            // Handle based on simulation flag
-            if (isSimulation) {
-                return handleSimulation(transaction);
-            } else {
-                return handleRealExecution(transaction);
-            }
 
+            // Fetch UTXOs for coin selection
+            WalletBalance balance = balanceService.getWalletBalance(walletId);
+            List<WalletBalance.UTXO> utxos = balance.getUtxos();
+
+            // Initial fee estimation (simplified for the unsigned structure)
+            long estimatedFee = feeCalculator
+                    .calculateFee(new org.bitcoinj.core.Transaction(wallet.networkParameters()));
+
+            org.bitcoinj.core.Transaction unsignedTx = createUnsignedTransaction(wallet, recipientAddress, amount,
+                    estimatedFee, utxos)
+                    .orElseThrow(() -> TransactionException
+                            .invalidTransaction("Insufficient funds or no spendable UTXOs for amount: " + amount));
+
+            // Calculate final fee based on the actual transaction size
+            long finalFee = feeCalculator.calculateFee(unsignedTx);
+
+            // Sign transaction
+            org.bitcoinj.core.Transaction signedTransaction = signTransaction(unsignedTx, wallet);
+
+            // Create transaction record
+            Transaction transaction = Transaction.fromTransaction(walletId, signedTransaction, isSimulation, finalFee);
+
+            return isSimulation ? handleSimulation(transaction) : handleRealExecution(transaction);
+
+        } catch (TransactionException e) {
+            throw e;
         } catch (Exception e) {
             throw TransactionException.transactionFailed("Failed to create transaction: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Creates an unsigned Bitcoin transaction.
+     * Creates an unsigned Bitcoin transaction with UTXO selection and change
+     * output.
      *
-     * @param wallet Wallet to send from
+     * @param wallet           Wallet to send from
      * @param recipientAddress Recipient Bitcoin address
-     * @param amount Amount to send in satoshis
-     * @return Unsigned transaction
+     * @param amount           Amount to send in satoshis
+     * @param fee              Fee to include in satoshis
+     * @param utxos            Available UTXOs
+     * @return Optional containing the unsigned transaction
      */
-    private org.bitcoinj.core.Transaction createUnsignedTransaction(Wallet wallet, String recipientAddress, long amount) {
-        try {
-            NetworkParameters networkParameters = wallet.networkParameters();
-            org.bitcoinj.core.Transaction transaction = new org.bitcoinj.core.Transaction(networkParameters);
+    private Optional<org.bitcoinj.core.Transaction> createUnsignedTransaction(
+            Wallet wallet, String recipientAddress, long amount, long fee, List<WalletBalance.UTXO> utxos) {
 
-            // Add output (simplified - real implementation would handle UTXOs)
-            Address recipient = Address.fromString(networkParameters, recipientAddress);
-            transaction.addOutput(Coin.valueOf(amount), recipient);
+        NetworkParameters params = wallet.networkParameters();
+        long targetAmount = amount + fee;
 
-            return transaction;
-
-        } catch (Exception e) {
-            throw TransactionException.invalidTransaction("Failed to create unsigned transaction: " + e.getMessage(), e);
+        // Coin Selection: Greedy approach to pick UTXOs (remember: UTXO are like cash bills!!!) until target is met
+        List<WalletBalance.UTXO> selectedUtxos = new ArrayList<>();
+        long totalInput = 0;
+        for (WalletBalance.UTXO utxo : utxos) {
+            selectedUtxos.add(utxo);
+            totalInput += utxo.getValue().getValue();
+            if (totalInput >= targetAmount)
+                break;
         }
+
+        if (totalInput < targetAmount) {
+            return Optional.empty();
+        }
+
+        org.bitcoinj.core.Transaction transaction = new org.bitcoinj.core.Transaction(params);
+
+        // Map selected UTXOs to TransactionInputs
+        selectedUtxos.stream()
+                .map(utxo -> {
+                    TransactionOutPoint outPoint = new TransactionOutPoint(params, utxo.getOutputIndex(),
+                            Sha256Hash.wrap(utxo.getTransactionHash()));
+                    return new TransactionInput(params, transaction, new byte[] {}, outPoint, utxo.getValue());
+                })
+                .forEach(transaction::addInput);
+
+        // Add recipient output
+        transaction.addOutput(Coin.valueOf(amount), Address.fromString(params, recipientAddress));
+
+        // Add change output if remainder is above dust limit
+        long changeValue = totalInput - targetAmount;
+        if (changeValue > org.bitcoinj.core.Transaction.MIN_NONDUST_OUTPUT.getValue()) {
+            transaction.addOutput(Coin.valueOf(changeValue), Address.fromString(params, wallet.address()));
+        }
+
+        return Optional.of(transaction);
     }
 
     /**
      * Signs a transaction with the wallet's private key.
      *
      * @param unsignedTransaction Transaction to sign
-     * @param wallet Wallet containing the private key
+     * @param wallet              Wallet containing the private key
      * @return Signed transaction
      */
-    private org.bitcoinj.core.Transaction signTransaction(
-        org.bitcoinj.core.Transaction unsignedTransaction, Wallet wallet
-    ) {
+    private org.bitcoinj.core.Transaction signTransaction(org.bitcoinj.core.Transaction unsignedTransaction,
+            Wallet wallet) {
         try {
             ECKey ecKey = wallet.toECKey();
-            // For this simplified example, we'll create a basic signature
-            // In a real implementation, this would properly sign the transaction
-            // For testing, we'll create a minimal valid script
-            
-            // Add a dummy input if none exists (for testing purposes)
-            if (unsignedTransaction.getInputs().isEmpty()) {
-                // Create a dummy transaction input - use empty byte array for simplicity
-                org.bitcoinj.core.TransactionInput input = new org.bitcoinj.core.TransactionInput(
-                    unsignedTransaction.getParams(),
-                    unsignedTransaction,
-                    new byte[]{0x00}
-                );
-                unsignedTransaction.addInput(input);
-            }
-            
-            // Create a proper scriptSig for testing
-            // Instead of using raw public key, create an empty script to avoid BitcoinJ validation
-            // This is a simplified approach for testing purposes
-            Script inputScript = new Script(new byte[]{}); // Empty script for testing
-            
-            unsignedTransaction.getInput(0).setScriptSig(inputScript);
-            return unsignedTransaction;
+            NetworkParameters params = wallet.networkParameters();
 
+            // For P2PKH (Legacy) addresses, we sign against the output script of the
+            // address
+            Script scriptPubKey = ScriptBuilder.createOutputScript(Address.fromString(params, wallet.address()));
+
+            List<TransactionInput> inputs = unsignedTransaction.getInputs();
+            for (int i = 0; i < inputs.size(); i++) {
+                // SigHash.ALL (0x01) signs all inputs and outputs to ensure transaction
+                // integrity
+                TransactionSignature signature = unsignedTransaction.calculateSignature(
+                        i, ecKey, scriptPubKey, org.bitcoinj.core.Transaction.SigHash.ALL, false);
+                inputs.get(i).setScriptSig(ScriptBuilder.createInputScript(signature, ecKey));
+            }
+
+            return unsignedTransaction;
         } catch (Exception e) {
-            throw TransactionException.signingFailed("Failed to sign transaction: " + e.getMessage(), e);
+            throw TransactionException.signingFailed("Cryptographic signing failed: " + e.getMessage(), e);
         }
     }
 
@@ -172,16 +201,15 @@ public class TransactionService {
 
         // Return transaction with SIMULATED status
         return new Transaction(
-            transaction.transactionId(),
-            transaction.walletId(),
-            transaction.recipientAddress(),
-            transaction.amount(),
-            transaction.fee(),
-            Transaction.TransactionStatus.SIMULATED,
-            transaction.createdAt(),
-            true,
-            transaction.rawTransaction()
-        );
+                transaction.transactionId(),
+                transaction.walletId(),
+                transaction.recipientAddress(),
+                transaction.amount(),
+                transaction.fee(),
+                Transaction.TransactionStatus.SIMULATED,
+                transaction.createdAt(),
+                true,
+                transaction.rawTransaction());
     }
 
     /**
@@ -202,16 +230,15 @@ public class TransactionService {
 
             // Return transaction with BROADCASTED status
             return new Transaction(
-                transaction.transactionId(),
-                transaction.walletId(),
-                transaction.recipientAddress(),
-                transaction.amount(),
-                transaction.fee(),
-                Transaction.TransactionStatus.BROADCASTED,
-                transaction.createdAt(),
-                false,
-                transaction.rawTransaction()
-            );
+                    transaction.transactionId(),
+                    transaction.walletId(),
+                    transaction.recipientAddress(),
+                    transaction.amount(),
+                    transaction.fee(),
+                    Transaction.TransactionStatus.BROADCASTED,
+                    transaction.createdAt(),
+                    false,
+                    transaction.rawTransaction());
 
         } catch (BitcoinBroadcastException e) {
             // Wrap our checked exception in the existing TransactionException
@@ -238,8 +265,8 @@ public class TransactionService {
         }
 
         long totalOutput = transaction.getOutputs().stream()
-            .mapToLong(output -> output.getValue().getValue())
-            .sum();
+                .mapToLong(output -> output.getValue().getValue())
+                .sum();
 
         if (totalOutput <= 0) {
             throw TransactionException.invalidTransaction("Transaction has no value");
@@ -251,11 +278,11 @@ public class TransactionService {
      *
      * @param transaction Transaction to broadcast
      * @throws BitcoinBroadcastException If broadcasting fails
-     * @throws IllegalArgumentException If transaction is invalid
+     * @throws IllegalArgumentException  If transaction is invalid
      */
     private void broadcastTransaction(org.bitcoinj.core.Transaction transaction)
-        throws BitcoinBroadcastException {
-        
+            throws BitcoinBroadcastException {
+
         // Validate input
         if (transaction == null) {
             throw new IllegalArgumentException("Transaction cannot be null");
@@ -268,9 +295,9 @@ public class TransactionService {
                 bitcoinNodeClient.broadcastTransaction(transaction);
             } else {
                 // Fallback to simulation mode when node connection is disabled
-                System.out.println("📡 [SIMULATION] Broadcasting transaction: " + 
-                    transaction.getTxId());
-                
+                System.out.println("📡 [SIMULATION] Broadcasting transaction: " +
+                        transaction.getTxId());
+
                 // Still check network conditions for simulation
                 if (!networkMonitor.isNetworkAvailable()) {
                     throw BitcoinBroadcastException.networkUnavailable();
