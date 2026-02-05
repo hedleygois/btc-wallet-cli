@@ -1,0 +1,6 @@
+# Use this file to override default variable values defined in variables.tf
+# Example:
+# aws_region = "eu-west-1"
+# project_name = "my-awesome-wallet"
+# app_port = 80
+# container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/btc-wallet-app:latest"
