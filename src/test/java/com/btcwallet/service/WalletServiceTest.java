@@ -56,8 +56,6 @@ class WalletServiceTest {
 
         // Then
         assertNotNull(service);
-        assertEquals(MainNetParams.get(), service.getNetworkParameters());
-        assertEquals("MainNet", service.getNetworkName());
         service.shutdown();
     }
 

@@ -31,8 +31,7 @@ public class WalletController {
     @PostMapping("/generate")
     public ResponseEntity<WalletDTO> generateWallet() {
         Wallet wallet = walletService.generateWallet();
-        String networkName = walletService.getNetworkName(); // Assuming this is available
-        return new ResponseEntity<>(WalletDTO.fromWallet(wallet, networkName), HttpStatus.CREATED);
+        return new ResponseEntity<>(WalletDTO.fromWallet(wallet), HttpStatus.CREATED);
     }
 
     /**
@@ -46,9 +45,8 @@ public class WalletController {
     public ResponseEntity<WalletDTO> generateWalletWithMnemonic() {
         WalletGenerator.WalletGenerationResult result = walletService.generateWalletWithMnemonic();
         Wallet wallet = result.getWallet();
-        String networkName = walletService.getNetworkName();
         // Do NOT expose result.getMnemonic() via the API
-        return new ResponseEntity<>(WalletDTO.fromWallet(wallet, networkName), HttpStatus.CREATED);
+        return new ResponseEntity<>(WalletDTO.fromWallet(wallet), HttpStatus.CREATED);
     }
 
     /**
@@ -62,7 +60,6 @@ public class WalletController {
     public ResponseEntity<WalletDTO> importWallet(@RequestBody ImportWalletRequest request) {
         String input = request.getKey();
         Wallet wallet;
-        String networkName = walletService.getNetworkName();
 
         try {
             // Heuristic to detect input type, similar to CLI
@@ -75,7 +72,7 @@ public class WalletController {
             } else {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // Or a more specific error DTO
             }
-            return ResponseEntity.ok(WalletDTO.fromWallet(wallet, networkName));
+            return ResponseEntity.ok(WalletDTO.fromWallet(wallet));
         } catch (WalletException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Placeholder, improve with ErrorDTO
         } catch (Exception e) {
