@@ -1,62 +1,64 @@
 package com.btcwallet;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
 import com.btcwallet.balance.BalanceService;
-import com.btcwallet.cli.WalletCLI;
 import com.btcwallet.config.BitcoinConfig;
-import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.network.BitcoinNodeClient;
 import com.btcwallet.network.FeeCalculator;
 import com.btcwallet.network.NetworkMonitor;
 import com.btcwallet.transaction.TransactionService;
-import com.btcwallet.wallet.WalletException;
 import com.btcwallet.wallet.WalletService;
 
-/**
- * Main entry point for the BTC Wallet Management Application.
- */
+@SpringBootApplication
 public class Main {
     
     public static void main(String[] args) {
-        System.out.println("=== BTC Wallet Management App ===");
-        System.out.println("A simple Bitcoin wallet manager using BitcoinJ");
-        System.out.println("======================================\n");
-        
-        try {
-            // Load Bitcoin configuration
-            BitcoinConfig bitcoinConfig = new BitcoinConfig();
-            System.out.println("📖 Loaded Bitcoin configuration: " + bitcoinConfig);
-            
-            // Initialize Bitcoin node client
-            BitcoinNodeClient bitcoinNodeClient = new BitcoinNodeClient(bitcoinConfig);
-            
-            // Initialize wallet service (default to MainNet)
-            WalletService walletService = new WalletService();
-            NetworkMonitor networkMonitor = new NetworkMonitor();
-            FeeCalculator feeCalculator = new FeeCalculator(networkMonitor);
-            
-            // Initialize balance service
-            BalanceService balanceService = new BalanceService(bitcoinNodeClient, walletService);
-            walletService.setBalanceService(balanceService);
-            
-            // Initialize transaction service with Bitcoin node client and balance service
-            TransactionService transactionService = new TransactionService(
-                walletService, feeCalculator, networkMonitor, bitcoinNodeClient, balanceService);
+        SpringApplication.run(Main.class, args);
+    }
 
-            // Start the CLI interface
-            WalletCLI cli = new WalletCLI(walletService, transactionService, feeCalculator, networkMonitor, balanceService);
-            cli.start();
-            
-        } catch (BitcoinConfigurationException e) {
-            System.err.println("\n[CONFIG ERROR] " + e.getMessage());
-            System.err.println("Please check your bitcoin.properties file.");
-            System.exit(1);
-        } catch (WalletException e) {
-            System.err.println("\n[FATAL ERROR] " + e.getMessage());
-            System.exit(1);
-        } catch (Exception e) {
-            System.err.println("\n[UNEXPECTED ERROR] An unexpected error occurred: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(1);
-        }
+    @Bean
+    public BitcoinConfig bitcoinConfig() throws com.btcwallet.exception.BitcoinConfigurationException {
+        return new BitcoinConfig();
+    }
+
+    @Bean
+    public BitcoinNodeClient bitcoinNodeClient(BitcoinConfig bitcoinConfig) {
+        return new BitcoinNodeClient(bitcoinConfig);
+    }
+
+    @Bean
+    public WalletService walletService() {
+        // WalletService might need BalanceService, set via setter to avoid circular dependency
+        return new WalletService();
+    }
+
+    @Bean
+    public NetworkMonitor networkMonitor() {
+        return new NetworkMonitor();
+    }
+
+    @Bean
+    public FeeCalculator feeCalculator(NetworkMonitor networkMonitor) {
+        return new FeeCalculator(networkMonitor);
+    }
+
+    @Bean
+    public BalanceService balanceService(BitcoinNodeClient bitcoinNodeClient, WalletService walletService) {
+        BalanceService service = new BalanceService(bitcoinNodeClient, walletService);
+        walletService.setBalanceService(service); // Set balance service on wallet service
+        return service;
+    }
+
+    @Bean
+    public TransactionService transactionService(
+            WalletService walletService,
+            FeeCalculator feeCalculator,
+            NetworkMonitor networkMonitor,
+            BitcoinNodeClient bitcoinNodeClient,
+            BalanceService balanceService) {
+        return new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient, balanceService);
     }
 }
