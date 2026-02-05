@@ -62,7 +62,14 @@ public class WalletImporter {
             var seedPhrase = Optional.ofNullable(mnemonic).filter(key -> !key.isEmpty())
                     .orElseThrow(() -> WalletException.invalidMnemonic("Mnemonic seed phrase cannot be null or empty"));
 
-            List<String> mnemonicWords = List.of(seedPhrase.trim().split("\\s+"));
+            String trimmedMnemonic = seedPhrase.trim();
+            List<String> mnemonicWords = List.of(trimmedMnemonic.split("\\s+"));
+            
+            // Basic validation of word count
+            if (mnemonicWords.size() != 12 && mnemonicWords.size() != 18 && mnemonicWords.size() != 24) {
+                throw WalletException.invalidMnemonic("Mnemonic must have 12, 18, or 24 words. Found: " + mnemonicWords.size());
+            }
+
             byte[] seed = MnemonicCode.toSeed(mnemonicWords, ""); // Empty passphrase
 
             // BIP44 Path: m / 44' / coin_type' / account' / change / address_index
