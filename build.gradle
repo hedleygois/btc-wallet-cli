@@ -1,26 +1,23 @@
 plugins {
     id 'java'
-    id 'application'
+    id 'org.springframework.boot' version '3.4.2'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
+
+group = 'com.btcwallet'
+version = '0.0.1-SNAPSHOT'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // BitcoinJ library (latest version)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.bitcoinj:bitcoinj-core:0.16.3'
-    
-    // Testing (updated to latest versions)
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
-    testImplementation 'org.junit.platform:junit-platform-launcher:1.10.0'
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
-    
-    // JSON for storage (updated to latest version)
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 java {
@@ -29,13 +26,10 @@ java {
     }
 }
 
-application {
-    mainClass = 'com.btcwallet.Main'
-}
-
-run {
-    standardInput = System.in
-}
+// Spring Boot will manage the main class
+// application {
+//    mainClass = 'com.btcwallet.Main'
+// }
 
 test {
     useJUnitPlatform()
@@ -43,14 +37,14 @@ test {
         events "passed", "skipped", "failed"
         showStandardStreams = true
     }
-    
-    // Ensure JUnit Platform is available
-    dependencies {
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    }
 }
 
 tasks.named('test') {
     // Always run tests
     outputs.upToDateWhen { false }
+}
+
+bootJar {
+    archiveFileName = "${project.name}.jar"
+    mainClass = 'com.btcwallet.Main'
 }
