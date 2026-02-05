@@ -17,25 +17,39 @@ import static org.mockito.ArgumentMatchers.any;
 class NetworkMonitorTest {
 
     private NetworkMonitor networkMonitor;
+    private Random mockRandom;
 
     @BeforeEach
     void setUp() {
         networkMonitor = new NetworkMonitor();
+        mockRandom = Mockito.mock(Random.class);
+        
+        try {
+            java.lang.reflect.Field randomField = NetworkMonitor.class.getDeclaredField("random");
+            randomField.setAccessible(true);
+            randomField.set(networkMonitor, mockRandom);
+        } catch (Exception e) {
+            fail("Failed to mock random field: " + e.getMessage());
+        }
     }
 
     @Test
     void testNetworkAvailability() {
-        // Network should generally be available
+        // Mock random.nextDouble() to return 0.1 (> 0.05)
+        Mockito.when(mockRandom.nextDouble()).thenReturn(0.1);
+        
         boolean available = networkMonitor.isNetworkAvailable();
-        assertTrue(available, "Network should be available most of the time");
+        assertTrue(available, "Network should be available when random > 0.05");
     }
 
     @Test
     void testMempoolSize() {
-        // Mempool size should be within reasonable bounds
+        // Mock random.nextInt()
+        Mockito.when(mockRandom.nextInt(any(Integer.class))).thenReturn(2000);
+        
         int mempoolSize = networkMonitor.getMempoolSize();
-        assertTrue(mempoolSize >= 1000, "Mempool size should be at least 1000");
-        assertTrue(mempoolSize <= 15000, "Mempool size should be at most 15000");
+        // Depending on the hour, it will be 3000+2000 or 1000+2000
+        assertTrue(mempoolSize == 5000 || mempoolSize == 3000, "Mempool size should be 3000 or 5000");
     }
 
     @Test
@@ -79,21 +93,10 @@ class NetworkMonitorTest {
         // - isNetworkAvailable() returns true (0.1 > 0.05)
         // - isNetworkHealthy() should return false (congestion >= 0.8)
         
-        Random mockRandom = Mockito.mock(Random.class);
-        
         try (MockedStatic<LocalTime> mockedLocalTime = Mockito.mockStatic(LocalTime.class)) {
             LocalTime mockTime = Mockito.mock(LocalTime.class);
             mockedLocalTime.when(LocalTime::now).thenReturn(mockTime);
             Mockito.when(mockTime.getHour()).thenReturn(10);
-            
-            // Mock the random field in NetworkMonitor
-            try {
-                java.lang.reflect.Field randomField = NetworkMonitor.class.getDeclaredField("random");
-                randomField.setAccessible(true);
-                randomField.set(networkMonitor, mockRandom);
-            } catch (Exception e) {
-                fail("Failed to mock random field: " + e.getMessage());
-            }
             
             // Mock random.nextDouble() to return 0.1 (network available since 0.1 > 0.05)
             Mockito.when(mockRandom.nextDouble()).thenReturn(0.1);
@@ -141,6 +144,9 @@ class NetworkMonitorTest {
 
     @Test
     void testNetworkConnection() {
+        // Mock random.nextDouble() to return 0.1 (> 0.05, so network is available when networkAvailable is true)
+        Mockito.when(mockRandom.nextDouble()).thenReturn(0.1);
+
         // Test connecting to network
         networkMonitor.connectToNetwork();
         assertTrue(networkMonitor.isNetworkAvailable(), "Network should be available after connecting");
