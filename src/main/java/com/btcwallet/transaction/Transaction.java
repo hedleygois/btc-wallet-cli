@@ -1,11 +1,10 @@
 package com.btcwallet.transaction;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.params.MainNetParams;
-
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.Instant;
+
+import org.bitcoinj.params.MainNetParams;
 
 /**
  * Represents a Bitcoin transaction.
@@ -32,9 +31,6 @@ public record Transaction(
     org.bitcoinj.core.Transaction rawTransaction
 ) implements Serializable {
 
-    /**
-     * Transaction status enum.
-     */
     public enum TransactionStatus {
         PENDING,        // Transaction created but not signed
         SIGNED,         // Transaction signed but not broadcasted
@@ -45,9 +41,6 @@ public record Transaction(
         SIMULATED       // Simulation completed (not broadcasted)
     }
 
-    /**
-     * Compact constructor for validation and default values.
-     */
     public Transaction {
         if (transactionId == null || transactionId.trim().isEmpty()) {
             throw new IllegalArgumentException("Transaction ID cannot be null or empty");
@@ -81,7 +74,7 @@ public record Transaction(
      * @return New Transaction instance
      */
     public static Transaction fromTransaction(String walletId, org.bitcoinj.core.Transaction rawTransaction, boolean isSimulation, long fee) {
-        var transactionHash = rawTransaction.getHashAsString();
+        var transactionHash = rawTransaction.getTxId().toString();
         var output = rawTransaction.getOutput(0);
         var recipientAddress = output.getScriptPubKey().getToAddress(MainNetParams.get()).toString();
         var amount = output.getValue().getValue();
@@ -101,49 +94,30 @@ public record Transaction(
         );
     }
 
-    /**
-     * Calculates estimated transaction fee.
-     * Simplified version - real implementation would use network conditions.
-     */
-    private static long calculateEstimatedFee(org.bitcoinj.core.Transaction transaction) {
-        // Basic fee calculation: size * satoshi-per-byte
-        byte[] serialized = transaction.bitcoinSerialize();
-        int size = serialized.length;
-        int satoshiPerByte = 5; // Default fee rate
-        return size * satoshiPerByte;
-    }
-
-    /**
-     * Gets the total amount including fee.
-     */
     public long getTotalAmount() {
         return amount + fee;
     }
 
-    /**
-     * Gets the amount in BTC (not satoshis).
-     */
+    public BigDecimal getAmountAsBigDecimal() {
+        return new BigDecimal(org.bitcoinj.core.Coin.valueOf(amount).toPlainString());
+    }
+
+    public BigDecimal getFeeAsBigDecimal() {
+        return new BigDecimal(org.bitcoinj.core.Coin.valueOf(fee).toPlainString());
+    }
+
     public String getAmountInBTC() {
-        return Coin.valueOf(amount).toFriendlyString();
+        return org.bitcoinj.core.Coin.valueOf(amount).toFriendlyString();
     }
 
-    /**
-     * Gets the fee in BTC (not satoshis).
-     */
     public String getFeeInBTC() {
-        return Coin.valueOf(fee).toFriendlyString();
+        return org.bitcoinj.core.Coin.valueOf(fee).toFriendlyString();
     }
 
-    /**
-     * Checks if transaction is confirmed.
-     */
     public boolean isConfirmed() {
         return status == TransactionStatus.CONFIRMED;
     }
 
-    /**
-     * Checks if transaction failed.
-     */
     public boolean isFailed() {
         return status == TransactionStatus.FAILED;
     }

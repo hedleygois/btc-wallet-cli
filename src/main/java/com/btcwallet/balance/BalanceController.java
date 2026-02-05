@@ -1,5 +1,7 @@
 package com.btcwallet.balance;
 
+import com.btcwallet.wallet.WalletService;
+import com.btcwallet.wallet.WalletException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/balance")
 public class BalanceController {
 
-    private final BalanceService balanceService;
+    private final WalletService walletService;
 
-    public BalanceController(BalanceService balanceService) {
-        this.balanceService = balanceService;
+    public BalanceController(WalletService walletService) {
+        this.walletService = walletService;
     }
 
     /**
@@ -26,9 +28,9 @@ public class BalanceController {
     @GetMapping("/{walletId}")
     public ResponseEntity<?> getWalletBalance(@PathVariable String walletId) {
         try {
-            WalletBalance balance = balanceService.getWalletBalance(walletId);
+            WalletBalance balance = walletService.getWalletBalance(walletId);
             return ResponseEntity.ok(balance);
-        } catch (BalanceException e) {
+        } catch (WalletException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

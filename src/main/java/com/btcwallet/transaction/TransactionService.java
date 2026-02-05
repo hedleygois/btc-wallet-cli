@@ -1,6 +1,20 @@
 package com.btcwallet.transaction;
 
-import com.btcwallet.balance.BalanceService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.TransactionInput;
+import org.bitcoinj.core.TransactionOutPoint;
+import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
+
 import com.btcwallet.balance.WalletBalance;
 import com.btcwallet.network.BitcoinBroadcastException;
 import com.btcwallet.network.BitcoinNodeClient;
@@ -8,15 +22,6 @@ import com.btcwallet.network.FeeCalculator;
 import com.btcwallet.network.NetworkMonitor;
 import com.btcwallet.wallet.Wallet;
 import com.btcwallet.wallet.WalletService;
-
-import org.bitcoinj.core.*;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.crypto.TransactionSignature;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Service for creating and managing Bitcoin transactions.
@@ -28,7 +33,6 @@ public class TransactionService {
     private final FeeCalculator feeCalculator;
     private final NetworkMonitor networkMonitor;
     private final BitcoinNodeClient bitcoinNodeClient;
-    private final BalanceService balanceService;
 
     /**
      * Creates a new TransactionService.
@@ -37,16 +41,13 @@ public class TransactionService {
      * @param feeCalculator     Fee calculator for determining transaction fees
      * @param networkMonitor    Network monitor for checking network conditions
      * @param bitcoinNodeClient Bitcoin node client for broadcasting transactions
-     * @param balanceService    Balance service for UTXO management
      */
     public TransactionService(WalletService walletService, FeeCalculator feeCalculator,
-            NetworkMonitor networkMonitor, BitcoinNodeClient bitcoinNodeClient,
-            BalanceService balanceService) {
+            NetworkMonitor networkMonitor, BitcoinNodeClient bitcoinNodeClient) {
         this.walletService = walletService;
         this.feeCalculator = feeCalculator;
         this.networkMonitor = networkMonitor;
         this.bitcoinNodeClient = bitcoinNodeClient;
-        this.balanceService = balanceService;
     }
 
     /**
@@ -76,7 +77,7 @@ public class TransactionService {
             }
 
             // Fetch UTXOs for coin selection
-            WalletBalance balance = balanceService.getWalletBalance(walletId);
+            var balance = walletService.getWalletBalance(walletId);
             List<WalletBalance.UTXO> utxos = balance.getUtxos();
 
             // Initial fee estimation (simplified for the unsigned structure)

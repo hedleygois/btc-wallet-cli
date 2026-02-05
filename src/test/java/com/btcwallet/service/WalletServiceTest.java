@@ -1,8 +1,9 @@
 package com.btcwallet.service;
 
-import com.btcwallet.balance.BalanceService;
+import com.btcwallet.balance.BalanceCache;
 import com.btcwallet.balance.WalletBalance;
 import com.btcwallet.balance.BalanceException;
+import com.btcwallet.network.BitcoinNodeClient;
 import com.btcwallet.wallet.Wallet;
 import com.btcwallet.wallet.WalletException;
 import com.btcwallet.wallet.WalletGenerator;
@@ -12,6 +13,7 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -20,6 +22,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,48 +31,34 @@ import static org.mockito.Mockito.*;
 class WalletServiceTest {
 
     @Mock
-    private BalanceService balanceService;
+    private BitcoinNodeClient bitcoinNodeClient;
 
-    @InjectMocks
-    private WalletService walletService; // Inject mocks into this instance
+    private WalletService walletService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Ensure walletService uses MainNetParams for most tests by default
-        // The @InjectMocks creates it via default constructor, so we need to set network params explicitly
-        // or ensure the mocked BalanceService is correctly set to the WalletService instance.
-        // For simplicity, re-initializing WalletService here if it needs specific NetworkParameters.
-        // Or, more correctly, you'd mock WalletGenerator/WalletImporter too if WalletService's constructor
-        // was more complex. Given current setup, default constructor is used by @InjectMocks.
-        // Let's create a new WalletService with default network and set the mock BalanceService.
-        this.walletService = new WalletService(MainNetParams.get());
-        this.walletService.setBalanceService(balanceService);
+        BalanceCache.getInstance().clearAll();
+        this.walletService = new WalletService(MainNetParams.get(), bitcoinNodeClient);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (walletService != null) {
+            walletService.shutdown();
+        }
     }
 
     @Test
     void testWalletServiceDefaultConstructor() {
         // Given/When
-        WalletService service = new WalletService(); // Directly instantiate to test default constructor
+        WalletService service = new WalletService(MainNetParams.get(), null);
 
         // Then
         assertNotNull(service);
         assertEquals(MainNetParams.get(), service.getNetworkParameters());
         assertEquals("MainNet", service.getNetworkName());
-    }
-
-    @Test
-    void testWalletServiceWithNetworkParameters() {
-        // Given/When
-        WalletService mainNetService = new WalletService(MainNetParams.get());
-        WalletService testNetService = new WalletService(TestNet3Params.get());
-
-        // Then
-        assertEquals(MainNetParams.get(), mainNetService.getNetworkParameters());
-        assertEquals("MainNet", mainNetService.getNetworkName());
-        
-        assertEquals(TestNet3Params.get(), testNetService.getNetworkParameters());
-        assertEquals("TestNet", testNetService.getNetworkName());
+        service.shutdown();
     }
 
     @Test
@@ -91,8 +80,7 @@ class WalletServiceTest {
     @Test
     void testGenerateWalletWithMnemonic() {
         // Setup for TestNet
-        walletService = new WalletService(TestNet3Params.get());
-        walletService.setBalanceService(balanceService);
+        walletService = new WalletService(TestNet3Params.get(), bitcoinNodeClient);
 
         // When
         WalletGenerator.WalletGenerationResult result = walletService.generateWalletWithMnemonic();
@@ -230,23 +218,28 @@ class WalletServiceTest {
     @Test
     void testCrossNetworkConsistency() {
         // Given
-        WalletService mainNetService = new WalletService(MainNetParams.get());
-        WalletService testNetService = new WalletService(TestNet3Params.get());
+        WalletService mainNetService = new WalletService(MainNetParams.get(), null);
+        WalletService testNetService = new WalletService(TestNet3Params.get(), null);
         
-        ECKey ecKey = new ECKey();
-        String privateKeyHex = ecKey.getPrivateKeyAsHex();
+        try {
+            ECKey ecKey = new ECKey();
+            String privateKeyHex = ecKey.getPrivateKeyAsHex();
 
-        // When
-        Wallet mainNetWallet = mainNetService.importFromPrivateKey(privateKeyHex);
-        Wallet testNetWallet = testNetService.importFromPrivateKey(privateKeyHex);
+            // When
+            Wallet mainNetWallet = mainNetService.importFromPrivateKey(privateKeyHex);
+            Wallet testNetWallet = testNetService.importFromPrivateKey(privateKeyHex);
 
-        // Then
-        assertNotEquals(mainNetWallet.address(), testNetWallet.address());
-        assertNotEquals(mainNetWallet.networkParameters(), testNetWallet.networkParameters());
-        
-        // But keys should be the same
-        assertEquals(mainNetWallet.publicKey(), testNetWallet.publicKey());
-        assertEquals(mainNetWallet.privateKey(), testNetWallet.privateKey());
+            // Then
+            assertNotEquals(mainNetWallet.address(), testNetWallet.address());
+            assertNotEquals(mainNetWallet.networkParameters(), testNetWallet.networkParameters());
+            
+            // But keys should be the same
+            assertEquals(mainNetWallet.publicKey(), testNetWallet.publicKey());
+            assertEquals(mainNetWallet.privateKey(), testNetWallet.privateKey());
+        } finally {
+            mainNetService.shutdown();
+            testNetService.shutdown();
+        }
     }
 
     @Test
@@ -376,14 +369,15 @@ class WalletServiceTest {
     // --- New Tests for balance-related methods with mocked BalanceService ---
 
     @Test
-    void testGetWalletBalance() throws BalanceException, WalletException {
+    void testGetWalletBalance() throws Exception {
         // Given
-        String walletId = "test-wallet-id";
+        Wallet wallet = walletService.generateWallet();
+        String walletId = wallet.walletId();
         Coin confirmed = Coin.valueOf(100000);
         Coin unconfirmed = Coin.valueOf(50000);
         Coin total = confirmed.add(unconfirmed);
         WalletBalance mockBalance = new WalletBalance(walletId, confirmed, unconfirmed, total, Instant.now(), "123456", Collections.emptyList());
-        when(balanceService.getWalletBalance(walletId)).thenReturn(mockBalance);
+        when(bitcoinNodeClient.getWalletBalance(wallet)).thenReturn(mockBalance);
 
         // When
         WalletBalance retrievedBalance = walletService.getWalletBalance(walletId);
@@ -391,45 +385,50 @@ class WalletServiceTest {
         // Then
         assertNotNull(retrievedBalance);
         assertEquals(mockBalance, retrievedBalance);
-        verify(balanceService, times(1)).getWalletBalance(walletId);
+        verify(bitcoinNodeClient, times(1)).getWalletBalance(wallet);
     }
 
     @Test
-    void testGetWalletBalance_BalanceServiceUnavailable() {
+    void testGetWalletBalance_NoBitcoinNodeClient() throws WalletException {
         // Given
-        WalletService serviceWithoutBalanceService = new WalletService(); // No balanceService set
-        String walletId = "test-wallet-id";
+        WalletService serviceWithoutClient = new WalletService(MainNetParams.get(), null);
+        Wallet wallet = serviceWithoutClient.generateWallet();
+        String walletId = wallet.walletId();
 
-        // When/Then
-        WalletException exception = assertThrows(WalletException.class, () -> {
-            serviceWithoutBalanceService.getWalletBalance(walletId);
-        });
-        assertTrue(exception.getMessage().contains("Balance service not available"));
+        // When
+        WalletBalance balance = serviceWithoutClient.getWalletBalance(walletId);
+
+        // Then
+        assertNotNull(balance);
+        assertEquals(Coin.ZERO, balance.getTotalBalance());
+        serviceWithoutClient.shutdown();
     }
 
     @Test
-    void testGetWalletBalance_BalanceException() throws BalanceException {
+    void testGetWalletBalance_BalanceException() throws Exception {
         // Given
-        String walletId = "test-wallet-id";
-        when(balanceService.getWalletBalance(walletId)).thenThrow(new BalanceException("Balance fetch error"));
+        Wallet wallet = walletService.generateWallet();
+        String walletId = wallet.walletId();
+        when(bitcoinNodeClient.getWalletBalance(wallet)).thenThrow(new RuntimeException("Node error"));
 
         // When/Then
         WalletException exception = assertThrows(WalletException.class, () -> {
             walletService.getWalletBalance(walletId);
         });
-        assertTrue(exception.getMessage().contains("Failed to get balance: Balance fetch error"));
-        verify(balanceService, times(1)).getWalletBalance(walletId);
+        assertTrue(exception.getMessage().contains("Failed to refresh balance: Node error"));
+        verify(bitcoinNodeClient, times(1)).getWalletBalance(wallet);
     }
 
     @Test
-    void testRefreshWalletBalance() throws BalanceException, WalletException {
+    void testRefreshWalletBalance() throws Exception {
         // Given
-        String walletId = "test-wallet-id";
+        Wallet wallet = walletService.generateWallet();
+        String walletId = wallet.walletId();
         Coin confirmed = Coin.valueOf(200000);
         Coin unconfirmed = Coin.valueOf(100000);
         Coin total = confirmed.add(unconfirmed);
         WalletBalance mockBalance = new WalletBalance(walletId, confirmed, unconfirmed, total, Instant.now(), "123457", Collections.emptyList());
-        when(balanceService.refreshWalletBalance(walletId)).thenReturn(mockBalance);
+        when(bitcoinNodeClient.getWalletBalance(wallet)).thenReturn(mockBalance);
 
         // When
         WalletBalance refreshedBalance = walletService.refreshWalletBalance(walletId);
@@ -437,62 +436,39 @@ class WalletServiceTest {
         // Then
         assertNotNull(refreshedBalance);
         assertEquals(mockBalance, refreshedBalance);
-        verify(balanceService, times(1)).refreshWalletBalance(walletId);
+        verify(bitcoinNodeClient, times(1)).getWalletBalance(wallet);
     }
 
     @Test
-    void testHasSufficientFunds() throws BalanceException, WalletException {
+    void testHasSufficientFunds() throws Exception {
         // Given
-        String walletId = "test-wallet-id";
+        Wallet wallet = walletService.generateWallet();
+        String walletId = wallet.walletId();
         Coin amount = Coin.valueOf(50000);
-        when(balanceService.hasSufficientFunds(walletId, amount)).thenReturn(true);
+        WalletBalance mockBalance = new WalletBalance(walletId, Coin.valueOf(100000), Coin.ZERO, Coin.valueOf(100000), Instant.now(), "1", Collections.emptyList());
+        when(bitcoinNodeClient.getWalletBalance(wallet)).thenReturn(mockBalance);
 
         // When
         boolean hasFunds = walletService.hasSufficientFunds(walletId, amount);
 
         // Then
         assertTrue(hasFunds);
-        verify(balanceService, times(1)).hasSufficientFunds(walletId, amount);
     }
 
     @Test
-    void testHasSufficientFunds_NoBalanceService() throws WalletException {
+    void testGetTotalBalance() throws Exception {
         // Given
-        WalletService serviceWithoutBalanceService = new WalletService();
-        String walletId = "test-wallet-id";
-        Coin amount = Coin.valueOf(50000);
-
-        // When
-        boolean hasFunds = serviceWithoutBalanceService.hasSufficientFunds(walletId, amount);
-
-        // Then
-        assertTrue(hasFunds); // Should return true if balance service is null
-    }
-
-    @Test
-    void testGetTotalBalance() throws BalanceException, WalletException {
-        // Given
-        Coin total = Coin.valueOf(500000);
-        when(balanceService.getTotalBalance()).thenReturn(total);
+        walletService.clearWallets();
+        Wallet w1 = walletService.generateWallet();
+        Wallet w2 = walletService.generateWallet();
+        
+        when(bitcoinNodeClient.getWalletBalance(w1)).thenReturn(new WalletBalance(w1.walletId(), Coin.valueOf(100), Coin.ZERO, Coin.valueOf(100), Instant.now(), "1", List.of()));
+        when(bitcoinNodeClient.getWalletBalance(w2)).thenReturn(new WalletBalance(w2.walletId(), Coin.valueOf(200), Coin.ZERO, Coin.valueOf(200), Instant.now(), "1", List.of()));
 
         // When
         Coin retrievedTotal = walletService.getTotalBalance();
 
         // Then
-        assertNotNull(retrievedTotal);
-        assertEquals(total, retrievedTotal);
-        verify(balanceService, times(1)).getTotalBalance();
-    }
-
-    @Test
-    void testGetTotalBalance_BalanceServiceUnavailable() {
-        // Given
-        WalletService serviceWithoutBalanceService = new WalletService();
-
-        // When/Then
-        WalletException exception = assertThrows(WalletException.class, () -> {
-            serviceWithoutBalanceService.getTotalBalance();
-        });
-        assertTrue(exception.getMessage().contains("Balance service not available"));
+        assertEquals(Coin.valueOf(300), retrievedTotal);
     }
 }

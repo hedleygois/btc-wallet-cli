@@ -1,7 +1,5 @@
 package com.btcwallet.service;
 
-import com.btcwallet.balance.BalanceException;
-import com.btcwallet.balance.BalanceService;
 import com.btcwallet.config.BitcoinConfig;
 import com.btcwallet.exception.BitcoinConfigurationException;
 import com.btcwallet.network.BitcoinNodeClient;
@@ -42,9 +40,6 @@ class TransactionServiceTest {
 
     @Mock
     private NetworkMonitor networkMonitor;
-
-    @Mock
-    private BalanceService balanceService;
 
     private BitcoinNodeClient bitcoinNodeClient;
 
@@ -99,8 +94,7 @@ class TransactionServiceTest {
             }
         });
 
-        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient,
-                balanceService);
+        transactionService = new TransactionService(walletService, feeCalculator, networkMonitor, bitcoinNodeClient);
 
         // Create test wallet
         ECKey ecKey = new ECKey();
@@ -131,7 +125,7 @@ class TransactionServiceTest {
 
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
-        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(walletService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any())).thenReturn(fee);
 
         // When
@@ -180,7 +174,7 @@ class TransactionServiceTest {
         // Mock services
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
-        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(walletService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any(org.bitcoinj.core.Transaction.class))).thenReturn(fee);
 
         // When
@@ -222,7 +216,7 @@ class TransactionServiceTest {
         // Mock services
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
-        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(walletService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any(org.bitcoinj.core.Transaction.class))).thenReturn(fee);
         when(networkMonitor.isNetworkAvailable()).thenReturn(true);
         when(networkMonitor.getMempoolSize()).thenReturn(3000);
@@ -307,7 +301,7 @@ class TransactionServiceTest {
 
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
-        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(walletService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(networkMonitor.isNetworkAvailable()).thenReturn(false);
 
         // Mock the transaction creation to bypass BitcoinJ signing issues
@@ -364,7 +358,7 @@ class TransactionServiceTest {
 
         when(walletService.getWallet(testWalletId)).thenReturn(testWallet);
         when(walletService.isValidAddress(testRecipient)).thenReturn(true);
-        when(balanceService.getWalletBalance(testWalletId)).thenReturn(balance);
+        when(walletService.getWalletBalance(testWalletId)).thenReturn(balance);
         when(feeCalculator.calculateFee(any())).thenReturn(5000L);
 
         // Test that validation catches invalid transactions (e.g. amount too high)
